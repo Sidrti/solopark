@@ -38,9 +38,25 @@
                     <span><strong>Vehicle:</strong></span>
                     <span>{{ $booking->vehicle->license_plate }} ({{ $booking->vehicle->make_model }})</span>
                 </div>
+                <div class="detail-row">
+                    <span><strong>Base Cost:</strong></span>
+                    <span>CA${{ number_format($booking->subtotal, 0) }}</span>
+                </div>
+                <div class="detail-row">
+                    <span><strong>Service Fee:</strong></span>
+                    <span>CA${{ number_format($booking->service_fee, 0) }}</span>
+                </div>
+                <div class="detail-row">
+                    <span><strong>Tax (13%):</strong></span>
+                    <span>CA${{ number_format($booking->tax, 0) }}</span>
+                </div>
+                <div class="detail-row">
+                    <span><strong>Gateway (3%):</strong></span>
+                    <span>CA${{ number_format($booking->gateway_fee, 0) }}</span>
+                </div>
                 <div class="detail-row" style="border-bottom: 0;">
-                    <span><strong>Paid:</strong></span>
-                    <span>CA${{ number_format($booking->total_price, 2) }}</span>
+                    <span><strong>Total Paid:</strong></span>
+                    <span>CA${{ number_format($booking->total_price, 0) }}</span>
                 </div>
             </div>
 

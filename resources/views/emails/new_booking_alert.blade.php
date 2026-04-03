@@ -44,7 +44,7 @@
                 </div>
                 <div class="detail-row" style="border-bottom: 0;">
                     <span><strong>Earnings:</strong></span>
-                    <span>CA${{ number_format($booking->subtotal, 2) }}</span>
+                    <span>CA${{ number_format($booking->subtotal, 0) }}</span>
                 </div>
             </div>
 

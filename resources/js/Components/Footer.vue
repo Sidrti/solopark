@@ -10,7 +10,10 @@ import { Link } from '@inertiajs/vue3';
                     <p>© 2025 SoloPark. All rights reserved.</p>
                     <Link :href="route('contact-us')" class="hover:text-white transition-colors">Contact Us</Link>
                 </div>
-                <p>Made with ❤️ in Toronto, Canada</p>
+                <p class="flex items-center gap-1.5">
+                    Proudly Canadian
+                    <!-- <span class="text-base select-none">🇨🇦</span> -->
+                </p>
             </div>
         </div>
     </footer>

@@ -22,6 +22,7 @@ class ParkingSpot extends Model
         'longitude',
         'parking_type',
         'price_hourly',
+        'price_monthly',
         'is_24_7',
         'features',
         'additional_points',
@@ -33,6 +34,7 @@ class ParkingSpot extends Model
         'features' => 'array',
         'additional_points' => 'array',
         'price_hourly' => 'decimal:2',
+        'price_monthly' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 

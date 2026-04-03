@@ -83,7 +83,7 @@ const formatDateTime = (dateString, timezone = null) => {
                                     </div>
                                     <div class="text-right">
                                         <p class="text-[13px] text-gray-400 font-bold uppercase tracking-wider mb-1">Total Paid</p>
-                                        <p class="text-xl font-extrabold text-[#1a1a1a]">CA${{ Number(booking.total_price).toFixed(2) }}</p>
+                                        <p class="text-xl font-extrabold text-[#1a1a1a]">CA${{ Number(booking.total_price).toFixed(0) }}</p>
                                     </div>
                                 </div>
                                 

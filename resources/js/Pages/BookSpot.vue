@@ -66,7 +66,7 @@ const isProcessing = ref(false);
 
 onMounted(async () => {
     stripe.value = await loadStripe(props.stripeKey);
-    
+
     // We'll initialize elements only after we have the amount, 
     // but we can't do it yet because we need a clientSecret.
     // Actually, we can initialize it with the amount if we use server-side creation.
@@ -200,8 +200,10 @@ const confirmBooking = async () => {
                 spot_id: props.spot.id,
                 vehicle_id: selectedVehicleId.value,
                 mobile_number: mobileNumber.value,
-                subtotal: subtotal.value,
-                service_fee: props.serviceFee,
+                subtotal: baseCost.value,
+                service_fee: calculatedServiceFee.value,
+                tax: tax.value,
+                gateway_fee: gatewayFee.value,
                 total_price: total.value,
                 timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 type: props.type,
@@ -235,15 +237,15 @@ const confirmBooking = async () => {
 const startTime = ref(props.start ? new Date(props.start) : new Date());
 const endTime = ref(props.end ? new Date(props.end) : new Date(startTime.value.getTime() + 3 * 60 * 60 * 1000));
 
-const durationHours = computed(() => {
+const durationMinutes = computed(() => {
     if (props.type === 'one-time') {
         const diffMs = (endTime.value && startTime.value) ? endTime.value.getTime() - startTime.value.getTime() : 0;
-        const diffHrs = Math.ceil(diffMs / (1000 * 60 * 60));
-        return diffHrs > 0 ? diffHrs : 1;
+        const diffMins = Math.ceil(diffMs / (1000 * 60));
+        return diffMins > 0 ? diffMins : 1;
     } else {
         // Recurring
         if (!props.startDate || !props.endDate || !props.startTimeForm || !props.endTimeForm) return 0;
-        
+
         const startDay = new Date(props.startDate + 'T00:00:00');
         const endDay = new Date(props.endDate + 'T00:00:00');
         const selectedDays = props.days ? props.days.split(',') : [];
@@ -268,20 +270,38 @@ const durationHours = computed(() => {
 
         const [sh, sm] = sParts.map(Number);
         const [eh, em] = eParts.map(Number);
-        const dailyDuration = (eh + em/60) - (sh + sm/60);
-        
-        const total = Math.ceil(dailyDuration > 0 ? dailyDuration : 1) * dayCount;
-        return total > 0 ? total : 0;
+        const dailyDurationMins = (eh * 60 + em) - (sh * 60 + sm);
+
+        return Math.max(dailyDurationMins, 0) * dayCount;
     }
 });
+
+const durationUnits = computed(() => {
+    return Math.ceil(durationMinutes.value / 30);
+});
+
+const baseCost = computed(() => {
+    if (props.type === 'monthly' && props.startDate && props.endDate) {
+        const start = new Date(props.startDate);
+        const end = new Date(props.endDate);
+        const diffDays = Math.round((end - start) / (24 * 60 * 60 * 1000));
+        const months = Math.ceil(diffDays / 30);
+        return (props.spot.price_monthly || props.spot.price) * months;
+    }
+    return (props.spot.price_hourly / 2) * durationUnits.value;
+});
+const calculatedServiceFee = computed(() => {
+    const rate = props.type === 'monthly' ? 0.30 : 0.10;
+    return baseCost.value * rate;
+});
+const tax = computed(() => (baseCost.value + calculatedServiceFee.value) * 0.13);
+const gatewayFee = computed(() => (baseCost.value + calculatedServiceFee.value + tax.value) * 0.03);
+const total = computed(() => baseCost.value + calculatedServiceFee.value + tax.value + gatewayFee.value);
 
 const formatDateTimeShort = (date) => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
         date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 };
-
-const subtotal = computed(() => props.spot.price * durationHours.value);
-const total = computed(() => subtotal.value + props.serviceFee);
 
 </script>
 <template>
@@ -292,7 +312,8 @@ const total = computed(() => subtotal.value + props.serviceFee);
         <Navbar :can-login="canLogin" :can-register="canRegister" :is-sticky="true" />
 
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-            <button @click="router.visit(route('spot-details', { id: spot.id, type: type, start: start, end: end, startDate: startDate, endDate: endDate, startTime: startTimeForm, endTime: endTimeForm, days: days }))"
+            <button
+                @click="router.visit(route('spot-details', { id: spot.id, type: type, start: start, end: end, startDate: startDate, endDate: endDate, startTime: startTimeForm, endTime: endTimeForm, days: days }))"
                 class="flex items-center text-[15px] font-bold text-gray-600 hover:text-gray-900 mb-6 transition">
                 <svg class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -413,8 +434,11 @@ const total = computed(() => subtotal.value + props.serviceFee);
                     <!-- Payment Section -->
                     <div class="bg-white rounded-[20px] p-6 sm:p-8 shadow-sm border border-gray-200">
                         <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                            <svg class="w-6 h-6 mr-3 text-[#1866ed]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                            <svg class="w-6 h-6 mr-3 text-[#1866ed]" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z">
+                                </path>
                             </svg>
                             Payment Method
                         </h2>
@@ -427,9 +451,11 @@ const total = computed(() => subtotal.value + props.serviceFee);
                         <div id="payment-element" class="mt-4 min-h-[100px]">
                             <!-- Stripe Elements will be injected here -->
                         </div>
-                        <div v-if="stripeError" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center text-red-700 text-sm font-medium">
+                        <div v-if="stripeError"
+                            class="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center text-red-700 text-sm font-medium">
                             <svg class="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                             {{ stripeError }}
                         </div>
@@ -465,16 +491,26 @@ const total = computed(() => subtotal.value + props.serviceFee);
                                     <span class="text-gray-900 font-bold">{{ formatDateTimeShort(endTime) }}</span>
                                 </div>
                             </template>
-                            <template v-else>
+                            <template v-else-if="type === 'recurring'">
                                 <div class="flex flex-col space-y-2">
                                     <div class="flex justify-between items-center text-[15px]">
                                         <span class="text-gray-500 font-medium tracking-wide">Recurring Booking</span>
-                                        <span class="text-gray-900 font-bold">{{ props.startDate }} to {{ props.endDate }}</span>
+                                        <span class="text-gray-900 font-bold">{{ props.startDate }} to {{ props.endDate
+                                            }}</span>
                                     </div>
                                     <div class="flex justify-between items-center text-[13px]">
-                                        <span class="text-[#1866ed] font-bold">{{ props.startTimeForm }} - {{ props.endTimeForm }}</span>
-                                        <span class="text-gray-500 font-medium uppercase truncate ml-2 max-w-[150px]">{{ props.days }}</span>
+                                        <span class="text-[#1866ed] font-bold">{{ props.startTimeForm }} - {{
+                                            props.endTimeForm }}</span>
+                                        <span class="text-gray-500 font-medium uppercase truncate ml-2 max-w-[150px]">{{
+                                            props.days }}</span>
                                     </div>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <div class="flex justify-between items-center text-[15px]">
+                                    <span class="text-gray-500 font-medium tracking-wide">Monthly Booking</span>
+                                    <span class="text-gray-900 font-bold">{{ props.startDate }} to {{ props.endDate
+                                        }}</span>
                                 </div>
                             </template>
                         </div>
@@ -484,13 +520,28 @@ const total = computed(() => subtotal.value + props.serviceFee);
                         <h4 class="text-[16px] font-bold text-gray-900 mb-4">Price Breakdown</h4>
                         <div class="space-y-3 mb-6">
                             <div class="flex justify-between items-center text-[15px]">
-                                <span class="text-gray-600 font-medium">CA${{ spot.price }} x {{ durationHours
-                                }} hours</span>
-                                <span class="text-gray-900 font-medium">CA${{ subtotal.toFixed(2) }}</span>
+                                <span v-if="type === 'monthly'" class="text-gray-600 font-medium">CA${{
+                                    Number(spot.price_monthly ||
+                                    spot.price).toFixed(0) }} x {{ Math.ceil(Math.round((new Date(endDate) - new
+                                        Date(startDate)) / (24 * 60 *
+                                    60 * 1000)) / 30) }} month(s)</span>
+                                <span v-else class="text-gray-600 font-medium">CA${{ (spot.price_hourly / 2).toFixed(0)
+                                    }} x {{ durationUnits
+                                    }} half-hours</span>
+                                <span class="text-gray-900 font-medium">CA${{ baseCost.toFixed(0) }}</span>
                             </div>
                             <div class="flex justify-between items-center text-[15px]">
-                                <span class="text-gray-600 font-medium">Service Fee</span>
-                                <span class="text-gray-900 font-medium">CA${{ serviceFee.toFixed(2) }}</span>
+                                <span class="text-gray-600 font-medium">Service Fee ({{ type === 'monthly' ? '30%' :
+                                    '10%' }})</span>
+                                <span class="text-gray-900 font-medium">CA${{ calculatedServiceFee.toFixed(0) }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-[15px]">
+                                <span class="text-gray-600 font-medium">Tax (13%)</span>
+                                <span class="text-gray-900 font-medium">CA${{ tax.toFixed(0) }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-[15px]">
+                                <span class="text-gray-600 font-medium">Gateway Charges (3%)</span>
+                                <span class="text-gray-900 font-medium">CA${{ gatewayFee.toFixed(0) }}</span>
                             </div>
                         </div>
 
@@ -498,26 +549,29 @@ const total = computed(() => subtotal.value + props.serviceFee);
 
                         <div class="flex justify-between items-center text-[18px] font-extrabold mb-8">
                             <span class="text-gray-900">Total (CAD)</span>
-                            <span class="text-[#1866ed]">CA${{ total.toFixed(2) }}</span>
+                            <span class="text-[#1866ed]">CA${{ total.toFixed(0) }}</span>
                         </div>
 
                         <button @click="confirmBooking" :disabled="isProcessing || !clientSecret"
                             class="w-full flex items-center justify-center py-4 px-4 border border-transparent rounded-[12px] shadow-sm text-[16px] font-extrabold text-white bg-[#1866ed] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1866ed] transition-colors mb-4 disabled:opacity-70 disabled:cursor-not-allowed">
                             <span v-if="isProcessing" class="flex items-center">
                                 <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
                                 </svg>
                                 Processing...
                             </span>
                             <span v-else>Complete Reservation</span>
                         </button>
 
-                        <p class="text-center text-[12px] text-gray-500 leading-relaxed px-2 font-medium mt-4">
+                        <!-- <p class="text-center text-[12px] text-gray-500 leading-relaxed px-2 font-medium mt-4">
                             By clicking "Complete Reservation", you agree to Solopark's <a href="#"
                                 class="underline hover:text-gray-800">Terms of Service</a> and <a href="#"
                                 class="underline hover:text-gray-800">Privacy Policy</a>.
-                        </p>
+                        </p> -->
                     </div>
                 </div>
 

@@ -41,15 +41,15 @@ const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString(undefined, options);
 };
 
-const getDurationHours = (start, end) => {
+const getDurationUnits = (start, end) => {
     if (!start || !end) return 0;
     const ms = new Date(end) - new Date(start);
-    return Math.ceil(ms / (1000 * 60 * 60));
+    return Math.ceil(ms / (1000 * 60 * 30));
 };
 
 const calculateTotalEarnings = (bookings) => {
-    if (!bookings) return '0.00';
-    return bookings.reduce((sum, b) => sum + parseFloat(b.total_price || 0), 0).toFixed(2);
+    if (!bookings) return '0';
+    return bookings.reduce((sum, b) => sum + parseFloat(b.total_price || 0), 0).toFixed(0);
 };
 
 const upcomingBookings = computed(() => {
@@ -276,10 +276,12 @@ const pastBookings = computed(() => {
                                         <div>
                                             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Pricing Breakdown</p>
                                             <p class="text-xs text-gray-600">
-                                                Duration: {{ getDurationHours(booking.start_time, booking.end_time) }} hrs
+                                                Duration: {{ getDurationUnits(booking.start_time, booking.end_time) }} half-hours
                                             </p>
-                                            <p class="text-xs text-gray-600">Subtotal: CA${{ booking.subtotal }}</p>
-                                            <p class="text-xs text-gray-600">Fee: CA${{ booking.service_fee }}</p>
+                                            <p class="text-xs text-gray-600">Base: CA${{ booking.subtotal }}</p>
+                                            <p class="text-xs text-gray-600">Fee (10%): CA${{ booking.service_fee }}</p>
+                                            <p v-if="booking.tax" class="text-xs text-gray-600">Tax (13%): CA${{ booking.tax }}</p>
+                                            <p v-if="booking.gateway_fee" class="text-xs text-gray-600">Gateway (3%): CA${{ booking.gateway_fee }}</p>
                                         </div>
                                         <div class="text-right">
                                             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total</p>

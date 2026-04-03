@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+return new class extends Migration 
 {
     public function up(): void
     {
@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('country')->nullable();
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
-            $table->enum('parking_type', ['Driveway', 'Garage', 'Uncovered Lot', 'Covered Lot']);
+            $table->enum('parking_type', ['Driveway', 'Garage', 'Uncovered Lot', 'Covered Lot', 'Backyard']);
             $table->decimal('price_hourly', 10, 2);
             $table->boolean('is_24_7')->default(false);
             $table->json('features')->nullable();

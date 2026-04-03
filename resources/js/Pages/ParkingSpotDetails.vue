@@ -50,11 +50,11 @@ const props = defineProps({
 const oneTimeStartTime = ref(props.start ? new Date(props.start) : new Date());
 const oneTimeEndTime = ref(props.end ? new Date(props.end) : new Date(oneTimeStartTime.value.getTime() + 3 * 60 * 60 * 1000));
 
-const hours = computed(() => {
+const durationMinutes = computed(() => {
     if (props.type === 'one-time') {
         const diffMs = oneTimeEndTime.value.getTime() - oneTimeStartTime.value.getTime();
-        const diffHrs = Math.ceil(diffMs / (1000 * 60 * 60));
-        return diffHrs > 0 ? diffHrs : 1;
+        const diffMins = Math.ceil(diffMs / (1000 * 60));
+        return diffMins > 0 ? diffMins : 1;
     } else {
         // Recurring
         if (!props.startDate || !props.endDate || !props.startTime || !props.endTime) return 0;
@@ -82,21 +82,36 @@ const hours = computed(() => {
 
         const [sh, sm] = sParts.map(Number);
         const [eh, em] = eParts.map(Number);
-        const dailyDuration = (eh + em / 60) - (sh + sm / 60);
+        const dailyDurationMins = (eh * 60 + em) - (sh * 60 + sm);
 
-        return Math.ceil(dailyDuration > 0 ? dailyDuration : 1) * dayCount;
+        return Math.max(dailyDurationMins, 0) * dayCount;
     }
 });
+
+const durationUnits = computed(() => Math.ceil(durationMinutes.value / 30));
+
+const baseCost = computed(() => {
+    if (props.type === 'monthly' && props.startDate && props.endDate) {
+        const start = new Date(props.startDate);
+        const end = new Date(props.endDate);
+        const diffDays = Math.round((end - start) / (24 * 60 * 60 * 1000));
+        const months = Math.ceil(diffDays / 30);
+        return (props.spot.price_monthly || props.spot.price) * months;
+    }
+    return (props.spot.price_hourly / 2) * durationUnits.value;
+});
+
+const serviceFeeAmount = computed(() => {
+    const rate = props.type === 'monthly' ? 0.30 : 0.10;
+    return baseCost.value * rate;
+});
+const taxAmount = computed(() => (baseCost.value + serviceFeeAmount.value) * 0.13);
+const gatewayFeeAmount = computed(() => (baseCost.value + serviceFeeAmount.value + taxAmount.value) * 0.03);
+const total = computed(() => baseCost.value + serviceFeeAmount.value + taxAmount.value + gatewayFeeAmount.value);
 
 const formatDateTimeShort = (date) => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
         date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-};
-
-const calculateTotal = () => {
-    const base = props.spot.price * hours.value;
-    const fee = props.serviceFee;
-    return (base + fee).toFixed(2);
 };
 
 </script>
@@ -242,19 +257,26 @@ const calculateTotal = () => {
                         <!-- Payment Breakdown -->
                         <div class="mb-6 space-y-4">
                             <div class="flex justify-between items-center text-[15px]">
-                                <span class="text-gray-600 underline decoration-gray-400 cursor-pointer">CA${{
-                                    spot.price }} x {{ hours }} hours</span>
-                                <span class="text-gray-900 font-bold">CA${{ (spot.price * hours).toFixed(2) }}</span>
+                                <span v-if="type === 'monthly'" class="text-gray-600 underline decoration-gray-400 cursor-pointer">CA${{ Number(spot.price_monthly || spot.price).toFixed(0) }} x {{ Math.ceil(Math.round((new Date(endDate) - new Date(startDate)) / (24 * 60 * 60 * 1000)) / 30) }} month(s)</span>
+                                <span v-else class="text-gray-600 underline decoration-gray-400 cursor-pointer">CA${{ (spot.price_hourly / 2).toFixed(0) }} x {{ durationUnits }} half-hours</span>
+                                <span class="text-gray-900 font-bold">CA${{ baseCost.toFixed(0) }}</span>
                             </div>
                             <div class="flex justify-between items-center text-[15px]">
-                                <span class="text-gray-600 underline decoration-gray-400 cursor-pointer">Service
-                                    fee</span>
-                                <span class="text-gray-900 font-bold">CA${{ Number(serviceFee).toFixed(2) }}</span>
+                                <span class="text-gray-600 underline decoration-gray-400 cursor-pointer">Service fee ({{ type === 'monthly' ? '30%' : '10%' }})</span>
+                                <span class="text-gray-900 font-bold">CA${{ serviceFeeAmount.toFixed(0) }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-[15px]">
+                                <span class="text-gray-600 underline decoration-gray-400 cursor-pointer">Tax (13%)</span>
+                                <span class="text-gray-900 font-bold">CA${{ taxAmount.toFixed(0) }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-[15px]">
+                                <span class="text-gray-600 underline decoration-gray-400 cursor-pointer">Gateway charges (3%)</span>
+                                <span class="text-gray-900 font-bold">CA${{ gatewayFeeAmount.toFixed(0) }}</span>
                             </div>
                             <div
                                 class="flex justify-between items-center text-[18px] font-extrabold border-t border-gray-200 pt-4 mt-2">
                                 <span class="text-gray-900">Total (CAD)</span>
-                                <span class="text-[#1866ed]">CA${{ calculateTotal() }}</span>
+                                <span class="text-[#1866ed]">CA${{ total.toFixed(0) }}</span>
                             </div>
                         </div>
 
