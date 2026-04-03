@@ -17,6 +17,8 @@ class Booking extends Model
         'mobile_number',
         'subtotal',
         'service_fee',
+        'tax',
+        'gateway_fee',
         'total_price',
         'status',
         'timezone',

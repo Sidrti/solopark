@@ -185,7 +185,7 @@ const formatDateTimeShort = (dateStr) => {
                         </div>
                     </div>
 
-                    <div v-else class="flex flex-1 items-center">
+                    <div v-else-if="props.type === 'recurring'" class="flex flex-1 items-center">
                         <div class="px-4 py-2 border-gray-200 flex flex-col justify-center h-full min-w-[140px] border-r">
                             <label class="text-[10px] font-bold text-gray-400 uppercase leading-none mb-1">Dates</label>
                             <div class="text-[13px] font-bold text-gray-900 truncate max-w-[130px]">{{ props.startDate }} - {{ props.endDate }}</div>
@@ -197,6 +197,12 @@ const formatDateTimeShort = (dateStr) => {
                         <div class="px-4 py-2 border-gray-200 flex flex-col justify-center h-full min-w-[120px] border-r">
                             <label class="text-[10px] font-bold text-gray-400 uppercase leading-none mb-1">Weekly Days</label>
                             <div class="text-[13px] font-bold text-gray-900 truncate max-w-[100px]">{{ props.days }}</div>
+                        </div>
+                    </div>
+                    <div v-else class="flex items-center">
+                         <div class="px-6 py-2 border-r border-gray-200 flex flex-col justify-center h-full min-w-[200px]">
+                            <label class="text-[10px] font-bold text-gray-400 uppercase leading-none mb-1">Monthly Range</label>
+                            <div class="text-[13px] font-bold text-gray-900">{{ props.startDate }} to {{ props.endDate }}</div>
                         </div>
                     </div>
 

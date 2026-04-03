@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Navbar from '@/Components/Navbar.vue';
@@ -111,6 +111,34 @@ const endDate = ref(new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000).toI
 const recurringStartTime = ref('09:00');
 const recurringEndTime = ref('17:00');
 
+const monthlyStartDate = ref(today);
+const monthlyEndDate = ref(new Date(new Date().getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+
+watch(monthlyStartDate, (newVal) => {
+    if (activeTab.value === 'monthly') {
+        const d = new Date(newVal);
+        d.setDate(d.getDate() + 30);
+        monthlyEndDate.value = d.toISOString().split('T')[0];
+    }
+});
+
+const adjustMonthlyEndDate = (direction) => {
+    const start = new Date(monthlyStartDate.value);
+    const currentEnd = new Date(monthlyEndDate.value);
+    const diffDays = Math.round((currentEnd - start) / (24 * 60 * 60 * 1000));
+    let newDiff = diffDays;
+    
+    if (direction === 'up') {
+        newDiff += 30;
+    } else {
+        newDiff = Math.max(30, newDiff - 30);
+    }
+    
+    const newEnd = new Date(start);
+    newEnd.setDate(newEnd.getDate() + newDiff);
+    monthlyEndDate.value = newEnd.toISOString().split('T')[0];
+};
+
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const toggleDay = (day) => {
@@ -133,12 +161,16 @@ const handleSearch = () => {
     if (activeTab.value === 'one-time') {
         params.start = startTime.value;
         params.end = endTime.value;
-    } else {
+    } else if (activeTab.value === 'recurring') {
         params.startDate = startDate.value;
         params.endDate = endDate.value;
         params.startTime = recurringStartTime.value;
         params.endTime = recurringEndTime.value;
         params.days = recurringDays.value.join(',');
+    } else {
+        // Monthly
+        params.startDate = monthlyStartDate.value;
+        params.endDate = monthlyEndDate.value;
     }
 
     router.get('/search', params);
@@ -147,7 +179,7 @@ const handleSearch = () => {
 
 <template>
 
-    <Head title="Find and reserve parking in Toronto" />
+    <Head title="Find and reserve parking in Canada" />
 
     <div class="min-h-screen bg-white font-sans text-gray-900 selection:bg-[#1866ed] selection:text-white">
         <!-- Navigation Bar -->
@@ -167,7 +199,7 @@ const handleSearch = () => {
                     </div> -->
 
                     <h1 class="text-4xl sm:text-[3rem] font-bold leading-[1.1] text-gray-900 mb-8 tracking-tight">
-                        Find and reserve parking in Toronto
+                        Find and reserve parking in Canada
                     </h1>
 
                     <!-- Search Form -->
@@ -183,6 +215,12 @@ const handleSearch = () => {
                             activeTab === 'recurring' ? 'bg-white text-[#1866ed] shadow-sm' : 'text-gray-500 hover:text-gray-700'
                         ]">
                             Recurring
+                        </button>
+                        <button type="button" @click="activeTab = 'monthly'" :class="[
+                            'flex-1 py-2 text-[14px] font-bold rounded-lg transition-all',
+                            activeTab === 'monthly' ? 'bg-white text-[#1866ed] shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                        ]">
+                            Monthly
                         </button>
                     </div>
 
@@ -233,7 +271,8 @@ const handleSearch = () => {
                         </div>
 
                         <!-- Recurring Search Fields -->
-                        <div v-else class="space-y-4">
+                        <div v-else-if="activeTab === 'recurring'" class="space-y-4">
+                            <!-- ... existing recurring fields ... -->
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="p-3 border border-gray-300 rounded-lg bg-white shadow-sm">
                                     <label class="block text-xs font-semibold text-gray-500 mb-1">Start Date</label>
@@ -273,11 +312,36 @@ const handleSearch = () => {
                             </div>
                         </div>
 
+                        <!-- Monthly Search Fields -->
+                        <div v-else class="space-y-4">
+                            <div class="grid grid-cols-1 border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm divide-y divide-gray-200">
+                                <div class="p-3 hover:bg-gray-50 transition">
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Select Start Date</label>
+                                    <input type="date" v-model="monthlyStartDate"
+                                        class="block w-full text-sm font-medium border-0 p-0 focus:ring-0 cursor-pointer" />
+                                </div>
+                                <div class="p-3 bg-blue-50/30 flex items-center justify-between">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-[#1866ed] mb-1 uppercase tracking-wider">Duration (Multiples of 30 days)</label>
+                                        <div class="text-[15px] font-bold text-gray-900">
+                                            Ending on: {{ new Date(monthlyEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+                                            <span class="text-xs font-medium text-gray-500 ml-2">({{ Math.round((new Date(monthlyEndDate) - new Date(monthlyStartDate)) / (24 * 60 * 60 * 1000)) }} days)</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button type="button" @click="adjustMonthlyEndDate('down')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-[#1866ed] hover:text-[#1866ed] transition shadow-sm">-</button>
+                                        <button type="button" @click="adjustMonthlyEndDate('up')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-[#1866ed] hover:text-[#1866ed] transition shadow-sm">+</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-gray-500 italic px-1">Monthly bookings are set in 30-day blocks for best rates.</p>
+                        </div>
+
                         <!-- Find Button -->
                         <div class="pt-2">
                             <PrimaryButton
                                 class="w-full text-center flex justify-center py-4 rounded-lg bg-[#1866ed] hover:bg-blue-700 active:bg-blue-800 text-base font-bold shadow-none border border-transparent !px-4">
-                                {{ activeTab === 'one-time' ? 'Find Parking Spots' : 'Find Recurring Spots' }}
+                                {{ activeTab === 'one-time' ? 'Find Parking Spots' : (activeTab === 'recurring' ? 'Find Recurring Spots' : 'Find Monthly Spots') }}
                             </PrimaryButton>
                         </div>
                     </form>
@@ -435,7 +499,7 @@ const handleSearch = () => {
                         <div
                             class="bg-[#1866ed] rounded-2xl p-7 text-white flex flex-col justify-between min-h-[160px]">
                             <span class="text-4xl font-bold leading-none">500+</span>
-                            <span class="text-sm font-medium opacity-80 mt-3">Parking locations across Toronto</span>
+                            <span class="text-sm font-medium opacity-80 mt-3">Parking locations across Canada</span>
                         </div>
                         <div
                             class="bg-[#f5f8ff] rounded-2xl p-7 flex flex-col justify-between min-h-[160px] border border-gray-100">

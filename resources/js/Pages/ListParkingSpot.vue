@@ -22,6 +22,7 @@ const form = useForm({
     longitude: null,
     type: null,
     price: '',
+    price_monthly: '',
     selectedDays: [],
     availFrom: '',
     availTo: '',
@@ -200,7 +201,7 @@ const submitListing = () => {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-2">
                         <div>
                             <label class="block text-[14px] font-bold text-gray-900 mb-2">Parking Type</label>
                             <select v-model="form.type"
@@ -211,10 +212,11 @@ const submitListing = () => {
                                 <option>Driveway</option>
                                 <option>Uncovered Lot</option>
                                 <option>Covered Lot</option>
+                                <option>Backyard</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price per hour (CA$)</label>
+                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price hourly (CA$)</label>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-[15px]">$</span>
@@ -222,6 +224,17 @@ const submitListing = () => {
                                 <input type="number" v-model="form.price" step="0.01" min="0"
                                     class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]"
                                     placeholder="5.00" required />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price monthly (CA$)</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-[15px]">$</span>
+                                </div>
+                                <input type="number" v-model="form.price_monthly" step="0.01" min="0"
+                                    class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]"
+                                    placeholder="100.00" />
                             </div>
                         </div>
                     </div>
@@ -388,10 +401,12 @@ const submitListing = () => {
                         </div>
                     </div>
                     <!-- Display overall photos error -->
-                    <div v-if="form.errors.photos" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.photos }}</div>
+                    <div v-if="form.errors.photos" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.photos
+                        }}</div>
                     <!-- Display specific photo errors -->
                     <template v-for="(error, key) in form.errors" :key="key">
-                        <div v-if="key.startsWith('photos.')" class="mt-1 text-sm text-red-600 font-medium">{{ error }}</div>
+                        <div v-if="key.startsWith('photos.')" class="mt-1 text-sm text-red-600 font-medium">{{ error }}
+                        </div>
                     </template>
                 </div>
 

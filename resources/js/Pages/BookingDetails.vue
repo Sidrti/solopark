@@ -35,10 +35,11 @@ const formatDateTime = (dateString) => {
     return date.toLocaleString('en-US', options);
 };
 
-const durationHours = computed(() => {
+const durationUnits = computed(() => {
     const diffMs = new Date(props.booking.end_time).getTime() - new Date(props.booking.start_time).getTime();
-    const diffHrs = Math.ceil(diffMs / (1000 * 60 * 60));
-    return diffHrs > 0 ? diffHrs : 1;
+    const diffMins = Math.ceil(diffMs / (1000 * 60));
+    const units = Math.ceil(diffMins / 30);
+    return units > 0 ? units : 1;
 });
 
 const mapsLink = computed(() => {
@@ -155,12 +156,20 @@ const mapsLink = computed(() => {
                         
                         <div class="space-y-4 mb-6">
                             <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-600">Parking Fee ({{ durationHours }}h)</span>
-                                <span class="text-gray-900 font-medium">CA${{ Number(booking.subtotal).toFixed(2) }}</span>
+                                <span class="text-gray-600">Parking Fee ({{ durationUnits }} half-hours)</span>
+                                <span class="text-gray-900 font-medium">CA${{ Number(booking.subtotal).toFixed(0) }}</span>
                             </div>
                             <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-600">Service Fee</span>
-                                <span class="text-gray-900 font-medium">CA${{ Number(booking.service_fee).toFixed(2) }}</span>
+                                <span class="text-gray-600">Service Fee (10%)</span>
+                                <span class="text-gray-900 font-medium">CA${{ Number(booking.service_fee).toFixed(0) }}</span>
+                            </div>
+                            <div v-if="booking.tax" class="flex justify-between items-center text-sm">
+                                <span class="text-gray-600">Tax (13%)</span>
+                                <span class="text-gray-900 font-medium">CA${{ Number(booking.tax).toFixed(0) }}</span>
+                            </div>
+                            <div v-if="booking.gateway_fee" class="flex justify-between items-center text-sm">
+                                <span class="text-gray-600">Gateway Charges (3%)</span>
+                                <span class="text-gray-900 font-medium">CA${{ Number(booking.gateway_fee).toFixed(0) }}</span>
                             </div>
                         </div>
 
@@ -168,7 +177,7 @@ const mapsLink = computed(() => {
 
                         <div class="flex justify-between items-center text-xl font-extrabold mb-8">
                             <span class="text-gray-900">Total Paid</span>
-                            <span class="text-[#1866ed]">CA${{ Number(booking.total_price).toFixed(2) }}</span>
+                            <span class="text-[#1866ed]">CA${{ Number(booking.total_price).toFixed(0) }}</span>
                         </div>
                         
                         <div class="text-center">
