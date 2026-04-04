@@ -127,13 +127,13 @@ const adjustMonthlyEndDate = (direction) => {
     const currentEnd = new Date(monthlyEndDate.value);
     const diffDays = Math.round((currentEnd - start) / (24 * 60 * 60 * 1000));
     let newDiff = diffDays;
-    
+
     if (direction === 'up') {
         newDiff += 30;
     } else {
         newDiff = Math.max(30, newDiff - 30);
     }
-    
+
     const newEnd = new Date(start);
     newEnd.setDate(newEnd.getDate() + newDiff);
     monthlyEndDate.value = newEnd.toISOString().split('T')[0];
@@ -314,27 +314,39 @@ const handleSearch = () => {
 
                         <!-- Monthly Search Fields -->
                         <div v-else class="space-y-4">
-                            <div class="grid grid-cols-1 border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm divide-y divide-gray-200">
+                            <div
+                                class="grid grid-cols-1 border border-gray-300 rounded-lg overflow-hidden bg-white shadow-sm divide-y divide-gray-200">
                                 <div class="p-3 hover:bg-gray-50 transition">
-                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Select Start Date</label>
+                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Select Start
+                                        Date</label>
                                     <input type="date" v-model="monthlyStartDate"
                                         class="block w-full text-sm font-medium border-0 p-0 focus:ring-0 cursor-pointer" />
                                 </div>
                                 <div class="p-3 bg-blue-50/30 flex items-center justify-between">
                                     <div>
-                                        <label class="block text-xs font-semibold text-[#1866ed] mb-1 uppercase tracking-wider">Duration (Multiples of 30 days)</label>
+                                        <label
+                                            class="block text-xs font-semibold text-[#1866ed] mb-1 uppercase tracking-wider">Duration
+                                            (Multiples of 30 days)</label>
                                         <div class="text-[15px] font-bold text-gray-900">
-                                            Ending on: {{ new Date(monthlyEndDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
-                                            <span class="text-xs font-medium text-gray-500 ml-2">({{ Math.round((new Date(monthlyEndDate) - new Date(monthlyStartDate)) / (24 * 60 * 60 * 1000)) }} days)</span>
+                                            Ending on: {{ new Date(monthlyEndDate).toLocaleDateString('en-US', {
+                                                month:
+                                                    'short', day: 'numeric', year: 'numeric'
+                                            }) }}
+                                            <span class="text-xs font-medium text-gray-500 ml-2">({{ Math.round((new
+                                                Date(monthlyEndDate) - new Date(monthlyStartDate)) / (24 * 60 * 60 *
+                                                    1000)) }} days)</span>
                                         </div>
                                     </div>
                                     <div class="flex gap-2">
-                                        <button type="button" @click="adjustMonthlyEndDate('down')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-[#1866ed] hover:text-[#1866ed] transition shadow-sm">-</button>
-                                        <button type="button" @click="adjustMonthlyEndDate('up')" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-[#1866ed] hover:text-[#1866ed] transition shadow-sm">+</button>
+                                        <button type="button" @click="adjustMonthlyEndDate('down')"
+                                            class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-[#1866ed] hover:text-[#1866ed] transition shadow-sm">-</button>
+                                        <button type="button" @click="adjustMonthlyEndDate('up')"
+                                            class="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-gray-200 text-gray-600 hover:border-[#1866ed] hover:text-[#1866ed] transition shadow-sm">+</button>
                                     </div>
                                 </div>
                             </div>
-                            <p class="text-[11px] text-gray-500 italic px-1">Monthly bookings are set in 30-day blocks for best rates.</p>
+                            <p class="text-[11px] text-gray-500 italic px-1">Monthly bookings are set in 30-day blocks
+                                for best rates.</p>
                         </div>
 
                         <!-- Find Button -->
@@ -629,10 +641,7 @@ const handleSearch = () => {
                                         d="M17 8l4 4m0 0l-4 4m4-4H3" />
                                 </svg>
                             </a>
-                            <a href="/how-it-works-owners"
-                                class="inline-flex items-center justify-center px-6 py-3 rounded-lg border border-white/20 text-white/80 hover:text-white hover:border-white/40 font-semibold text-sm transition">
-                                Learn more
-                            </a>
+
                         </div>
                     </div>
 

@@ -155,22 +155,6 @@ const mapsLink = computed(() => {
                         <h3 class="text-lg font-bold text-gray-900 mb-6">Payment Summary</h3>
                         
                         <div class="space-y-4 mb-6">
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-600">Parking Fee ({{ durationUnits }} half-hours)</span>
-                                <span class="text-gray-900 font-medium">CA${{ Number(booking.subtotal).toFixed(0) }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-sm">
-                                <span class="text-gray-600">Service Fee (10%)</span>
-                                <span class="text-gray-900 font-medium">CA${{ Number(booking.service_fee).toFixed(0) }}</span>
-                            </div>
-                            <div v-if="booking.tax" class="flex justify-between items-center text-sm">
-                                <span class="text-gray-600">Tax (13%)</span>
-                                <span class="text-gray-900 font-medium">CA${{ Number(booking.tax).toFixed(0) }}</span>
-                            </div>
-                            <div v-if="booking.gateway_fee" class="flex justify-between items-center text-sm">
-                                <span class="text-gray-600">Gateway Charges (3%)</span>
-                                <span class="text-gray-900 font-medium">CA${{ Number(booking.gateway_fee).toFixed(0) }}</span>
-                            </div>
                         </div>
 
                         <hr class="border-gray-200 mb-4">

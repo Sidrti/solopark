@@ -176,7 +176,7 @@ class ParkingSpotController extends Controller
             }
         }
 
-        $spots = $query->get()->map(function ($spot) use ($searchType) {
+        $spots = $query->get()->map(function ($spot) use ($request, $searchType, $timezone) {
             $photos = $spot->relationLoaded('photos') ? $spot->getRelation('photos') : collect([]);
             $firstPhoto = $photos->first();
 
@@ -185,18 +185,75 @@ class ParkingSpotController extends Controller
             $speedMph = $speedKmh / 1.60934;
             $walkMinutes = $speedMph > 0 ? round(($distMiles / $speedMph) * 60) : 0;
 
+            // Calculate Final Price Including Fees and Taxes
+            $baseCost = 0;
+            if ($searchType === 'monthly') {
+                $startDate = $request->input('startDate');
+                $endDate = $request->input('endDate');
+                $months = 1;
+                if ($startDate && $endDate) {
+                    $start = \Carbon\Carbon::parse($startDate, $timezone);
+                    $end = \Carbon\Carbon::parse($endDate, $timezone);
+                    $diffDays = $start->diffInDays($end);
+                    $months = max(1, ceil($diffDays / 30));
+                }
+                $baseCost = ($spot->price_monthly ?? $spot->price_hourly) * $months;
+            } else if ($searchType === 'one-time') {
+                $start = $request->input('start');
+                $end = $request->input('end');
+                $durationUnits = 2; // Default 1 hour
+                if ($start && $end) {
+                    $startDt = \Carbon\Carbon::parse($start, $timezone);
+                    $endDt = \Carbon\Carbon::parse($end, $timezone);
+                    $diffMins = $startDt->diffInMinutes($endDt);
+                    $durationUnits = max(1, ceil($diffMins / 30));
+                }
+                $baseCost = ($spot->price_hourly / 2) * $durationUnits;
+            } else {
+                 // Recurring
+                $startDate = $request->input('startDate');
+                $endDate = $request->input('endDate');
+                $startTime = $request->input('startTime');
+                $endTime = $request->input('endTime');
+                $days = explode(',', $request->input('days', ''));
+                
+                $durationUnits = 0;
+                if ($startDate && $endDate && $startTime && $endTime && !empty($days)) {
+                    $startRange = \Carbon\Carbon::parse($startDate, $timezone);
+                    $endRange = \Carbon\Carbon::parse($endDate, $timezone);
+                    
+                    $sParts = explode(':', $startTime);
+                    $eParts = explode(':', $endTime);
+                    $dailyMinutes = ($eParts[0] * 60 + $eParts[1]) - ($sParts[0] * 60 + $sParts[1]);
+                    $dailyUnits = max(0, ceil($dailyMinutes / 30));
+                    
+                    $current = $startRange->copy();
+                    while ($current->lte($endRange)) {
+                        if (in_array($current->format('D'), $days)) {
+                            $durationUnits += $dailyUnits;
+                        }
+                        $current->addDay();
+                    }
+                }
+                if ($durationUnits == 0) $durationUnits = 2;
+                $baseCost = ($spot->price_hourly / 2) * $durationUnits;
+            }
+
+            $serviceRate = ($searchType === 'monthly') ? 0.30 : 0.10;
+            $finalPrice = $baseCost * (1 + $serviceRate) * 1.13 * 1.03;
+
             return [
-            'id' => $spot->id,
-            'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
-            'rating' => 4.5,
-            'reviews' => 10,
-            'walk' => $walkMinutes . ' min',
-            'dist' => isset($spot->distance) ? number_format($spot->distance, 1) : '0.0',
-            'price' => $searchType === 'monthly' ? $spot->price_monthly : $spot->price_hourly,
-            'badge' => $searchType === 'monthly' ? 'Monthly' : null,
-            'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=400',
-            'lat' => $spot->latitude,
-            'lng' => $spot->longitude,
+                'id' => $spot->id,
+                'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
+                'rating' => 4.5,
+                'reviews' => 10,
+                'walk' => $walkMinutes . ' min',
+                'dist' => isset($spot->distance) ? number_format($spot->distance, 1) : '0.0',
+                'price' => round($finalPrice, 0),
+                'badge' => $searchType === 'monthly' ? 'Monthly' : null,
+                'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=400',
+                'lat' => $spot->latitude,
+                'lng' => $spot->longitude,
             ];
         });
 
@@ -397,6 +454,147 @@ class ParkingSpotController extends Controller
         $spot->save();
 
         return back()->with('success', 'Status updated successfully.');
+    }
+
+    public function edit($id)
+    {
+        $spot = ParkingSpot::with(['photos', 'availabilities'])->findOrFail($id);
+
+        if ($spot->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $availDays = $spot->availabilities->pluck('day_of_week')->toArray();
+        $startTime = $spot->availabilities->first()?->start_time;
+        $endTime = $spot->availabilities->first()?->end_time;
+
+        return \Inertia\Inertia::render('EditParkingSpot', [
+            'spot' => [
+                'id' => $spot->id,
+                'title' => $spot->title,
+                'address' => $spot->address,
+                'city' => $spot->city,
+                'state' => $spot->state,
+                'country' => $spot->country,
+                'latitude' => $spot->latitude,
+                'longitude' => $spot->longitude,
+                'parking_type' => $spot->parking_type,
+                'price_hourly' => $spot->price_hourly,
+                'price_monthly' => $spot->price_monthly,
+                'is_24_7' => $spot->is_24_7,
+                'features' => $spot->features,
+                'additional_points' => $spot->additional_points,
+                'selectedDays' => $availDays,
+                'availFrom' => $startTime ? \Carbon\Carbon::parse($startTime)->format('H:i') : '',
+                'availTo' => $endTime ? \Carbon\Carbon::parse($endTime)->format('H:i') : '',
+                'photos' => collect($spot->photos ?? [])->map(fn($p) => ['id' => $p->id, 'url' => asset('storage/' . $p->image_path)])
+            ]
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $spot = ParkingSpot::findOrFail($id);
+
+        if ($spot->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'address' => 'required|string|max:255',
+            'type' => 'required|string|in:Driveway,Garage,Uncovered Lot,Covered Lot,Backyard',
+            'price' => 'required|numeric|min:0',
+            'price_monthly' => 'nullable|numeric|min:0',
+            'is24_7' => 'boolean',
+            'features' => 'array',
+            'additionalPoints' => 'array',
+            'selectedDays' => 'array',
+            'availFrom' => 'nullable|string',
+            'availTo' => 'nullable|string',
+            'city' => 'nullable|string|max:255',
+            'state' => 'nullable|string|max:255',
+            'country' => 'nullable|string|max:255',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'photos' => 'nullable|array',
+            'photos.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
+            'removePhotos' => 'nullable|array',
+            'removePhotos.*' => 'exists:parking_spot_photos,id'
+        ]);
+
+        $spot->update([
+            'title' => $validated['title'],
+            'address' => $validated['address'],
+            'city' => $validated['city'] ?? $spot->city,
+            'state' => $validated['state'] ?? $spot->state,
+            'country' => $validated['country'] ?? $spot->country,
+            'latitude' => $validated['latitude'] ?? $spot->latitude,
+            'longitude' => $validated['longitude'] ?? $spot->longitude,
+            'parking_type' => $validated['type'],
+            'price_hourly' => $validated['price'],
+            'price_monthly' => $validated['price_monthly'] ?? null,
+            'is_24_7' => $validated['is24_7'] ?? false,
+            'features' => $validated['features'] ?? [],
+            'additional_points' => $validated['additionalPoints'] ?? [],
+        ]);
+
+        // Update availabilities
+        $spot->availabilities()->delete();
+        if (!empty($validated['selectedDays'])) {
+            foreach ($validated['selectedDays'] as $day) {
+                ParkingSpotAvailability::create([
+                    'parking_spot_id' => $spot->id,
+                    'day_of_week' => $day,
+                    'start_time' => $validated['availFrom'],
+                    'end_time' => $validated['availTo'],
+                ]);
+            }
+        }
+
+        // Handle removed photos
+        if (!empty($validated['removePhotos'])) {
+            $photosToRemove = ParkingSpotPhoto::whereIn('id', $validated['removePhotos'])->where('parking_spot_id', $spot->id)->get();
+            foreach ($photosToRemove as $photo) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($photo->image_path);
+                $photo->delete();
+            }
+        }
+
+        // Handle new photos
+        if ($files = $request->file('photos')) {
+            $files = is_array($files) ? $files : [$files];
+            foreach ($files as $photo) {
+                $path = $photo->store('parking_spots', 'public');
+                ParkingSpotPhoto::create([
+                    'parking_spot_id' => $spot->id,
+                    'image_path' => $path,
+                ]);
+            }
+        }
+
+        return redirect()->route('spots.my-listings')->with('success', 'Parking spot updated successfully!');
+    }
+
+    public function destroy($id)
+    {
+        $spot = ParkingSpot::with('photos')->findOrFail($id);
+
+        if ($spot->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        // Delete photos from storage
+        $photos = $spot->photos ?? collect([]);
+        foreach ($photos as $photo) {
+            if ($photo->image_path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($photo->image_path);
+            }
+        }
+
+        $spot->delete();
+
+        return redirect()->route('spots.my-listings')->with('success', 'Parking spot deleted successfully!');
     }
 
     public function bookings($id)

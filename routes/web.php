@@ -52,8 +52,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // My Listings
     Route::get('/my-listings', [App\Http\Controllers\ParkingSpotController::class, 'userListings'])->name('spots.my-listings');
+    Route::get('/spots/{spot}/edit', [App\Http\Controllers\ParkingSpotController::class, 'edit'])->name('spots.edit');
+    Route::post('/spots/{spot}', [App\Http\Controllers\ParkingSpotController::class, 'update'])->name('spots.update'); // Using POST for multipart/form-data update
+    Route::delete('/spots/{spot}', [App\Http\Controllers\ParkingSpotController::class, 'destroy'])->name('spots.destroy');
     Route::patch('/spots/{spot}/toggle-status', [App\Http\Controllers\ParkingSpotController::class, 'toggleStatus'])->name('spots.toggle-status');
     Route::get('/spots/{spot}/bookings', [App\Http\Controllers\ParkingSpotController::class, 'bookings'])->name('spots.bookings');
 });
+
+Route::post('/contact-us', [App\Http\Controllers\ContactController::class, 'submit'])->name('contact.submit');
 
 require __DIR__ . '/auth.php';

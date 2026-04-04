@@ -211,8 +211,8 @@ const formatDateTimeShort = (date) => {
                 <div class="relative">
                     <div class="sticky top-[100px] border border-gray-200 rounded-[20px] shadow-lg p-6 sm:p-8 bg-white">
                         <div class="mb-4">
-                            <span class="text-3xl font-extrabold text-gray-900">CA${{ spot.price }}</span>
-                            <span class="text-gray-500 text-[15px] font-medium ml-1">/ hour</span>
+                            <span class="text-3xl font-extrabold text-gray-900">CA${{ total.toFixed(0) }}</span>
+                            <!-- <span class="text-gray-500 text-[15px] font-medium ml-1">/ hour</span> -->
                         </div>
                         <div class="text-[14px] text-gray-500 mb-6">Includes all service fees and taxes</div>
 
@@ -256,23 +256,6 @@ const formatDateTimeShort = (date) => {
 
                         <!-- Payment Breakdown -->
                         <div class="mb-6 space-y-4">
-                            <div class="flex justify-between items-center text-[15px]">
-                                <span v-if="type === 'monthly'" class="text-gray-600 underline decoration-gray-400 cursor-pointer">CA${{ Number(spot.price_monthly || spot.price).toFixed(0) }} x {{ Math.ceil(Math.round((new Date(endDate) - new Date(startDate)) / (24 * 60 * 60 * 1000)) / 30) }} month(s)</span>
-                                <span v-else class="text-gray-600 underline decoration-gray-400 cursor-pointer">CA${{ (spot.price_hourly / 2).toFixed(0) }} x {{ durationUnits }} half-hours</span>
-                                <span class="text-gray-900 font-bold">CA${{ baseCost.toFixed(0) }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-[15px]">
-                                <span class="text-gray-600 underline decoration-gray-400 cursor-pointer">Service fee ({{ type === 'monthly' ? '30%' : '10%' }})</span>
-                                <span class="text-gray-900 font-bold">CA${{ serviceFeeAmount.toFixed(0) }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-[15px]">
-                                <span class="text-gray-600 underline decoration-gray-400 cursor-pointer">Tax (13%)</span>
-                                <span class="text-gray-900 font-bold">CA${{ taxAmount.toFixed(0) }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-[15px]">
-                                <span class="text-gray-600 underline decoration-gray-400 cursor-pointer">Gateway charges (3%)</span>
-                                <span class="text-gray-900 font-bold">CA${{ gatewayFeeAmount.toFixed(0) }}</span>
-                            </div>
                             <div
                                 class="flex justify-between items-center text-[18px] font-extrabold border-t border-gray-200 pt-4 mt-2">
                                 <span class="text-gray-900">Total (CAD)</span>

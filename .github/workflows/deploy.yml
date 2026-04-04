@@ -11,26 +11,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - name: Upload Files
+        uses: appleboy/scp-action@master
         with:
-          php-version: '8.3'
-          extensions: mbstring, xml, bcmath, curl, intl
+          host: ${{ secrets.SSH_IP }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: "."
+          target: /home/u478632488/domains/solopark.ca/public_html
 
-      - name: Install Composer Dependencies
-        run: composer install --no-dev --optimize-autoloader --no-interaction
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Build Assets
-        run: |
-          npm install
-          npm run build
-
-      - name: Deploy to Hostinger via SSH
+      - name: Run Commands
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_IP }}
@@ -38,10 +29,24 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
-            cd domains/solopar.ca/public_html
-            git pull origin main
-            composer install --no-dev --optimize-autoloader
+            cd /home/u478632488/domains/solopark.ca/public_html
+
+            # Install PHP dependencies
+            composer install --no-dev --optimize-autoloader --no-interaction
+
+            # Install Node dependencies
+            npm install
+
+            # Build with environment variables
+            VITE_APP_NAME="${{ secrets.APP_NAME }}" \
+            VITE_GOOGLE_MAPS_API_KEY="${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}" \
+            NODE_ENV=production \
+            npm run build
+
+            # Laravel optimizations
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
+
+            # Run migrations
             php artisan migrate --force
