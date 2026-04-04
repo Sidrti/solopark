@@ -36,6 +36,18 @@ const toggleStatus = (spotId) => {
     });
 };
 
+const deleteSpot = (spotId) => {
+    if (confirm('Are you sure you want to delete this parking spot? This action cannot be undone.')) {
+        router.delete(route('spots.destroy', spotId), {
+            onSuccess: () => closeModal(),
+        });
+    }
+};
+
+const editSpot = (spotId) => {
+    router.get(route('spots.edit', spotId));
+};
+
 const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
     return new Date(dateString).toLocaleDateString(undefined, options);
@@ -274,14 +286,10 @@ const pastBookings = computed(() => {
                                             <p class="text-xs font-bold">{{ formatDate(booking.start_time) }}</p>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Pricing Breakdown</p>
+                                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Pricing</p>
                                             <p class="text-xs text-gray-600">
                                                 Duration: {{ getDurationUnits(booking.start_time, booking.end_time) }} half-hours
                                             </p>
-                                            <p class="text-xs text-gray-600">Base: CA${{ booking.subtotal }}</p>
-                                            <p class="text-xs text-gray-600">Fee (10%): CA${{ booking.service_fee }}</p>
-                                            <p v-if="booking.tax" class="text-xs text-gray-600">Tax (13%): CA${{ booking.tax }}</p>
-                                            <p v-if="booking.gateway_fee" class="text-xs text-gray-600">Gateway (3%): CA${{ booking.gateway_fee }}</p>
                                         </div>
                                         <div class="text-right">
                                             <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total</p>
@@ -343,6 +351,24 @@ const pastBookings = computed(() => {
                             </div>
                         </div>
                     </section>
+
+                    <!-- Danger Zone / Actions -->
+                    <div class="pt-8 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
+                        <Link :href="route('spots.edit', selectedSpot.id)" 
+                            class="flex-1 inline-flex items-center justify-center bg-white hover:bg-gray-50 text-gray-900 font-bold py-4 px-8 rounded-2xl border border-gray-200 transition shadow-sm">
+                            <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit Listing
+                        </Link>
+                        <button @click="deleteSpot(selectedSpot.id)" 
+                            class="flex-1 inline-flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 font-bold py-4 px-8 rounded-2xl border border-red-100 transition">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete Listing
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

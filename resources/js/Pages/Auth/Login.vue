@@ -31,77 +31,100 @@ const submit = () => {
 
 <template>
     <GuestLayout>
+
         <Head title="Log in" />
 
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
+        <!-- Status message -->
+        <div v-if="status"
+            class="mb-5 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+            <svg class="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+                    clip-rule="evenodd" />
+            </svg>
             {{ status }}
         </div>
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email" />
+        <form @submit.prevent="submit" class="space-y-5">
 
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
-
-                <InputError class="mt-2" :message="form.errors.email" />
+            <!-- Email -->
+            <div class="group">
+                <InputLabel for="email" value="Email address"
+                    class="mb-1.5 block text-xs font-semibold tracking-wide text-gray-500 uppercase" />
+                <div class="relative">
+                    <span
+                        class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400 group-focus-within:text-[#1866ed] transition-colors duration-150">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                        </svg>
+                    </span>
+                    <TextInput id="email" type="email"
+                        class="block w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition focus:border-[#1866ed] focus:bg-white focus:ring-2 focus:ring-[#1866ed]/20 focus:outline-none"
+                        v-model="form.email" placeholder="you@example.com" required autofocus autocomplete="username" />
+                </div>
+                <InputError class="mt-1.5 text-xs" :message="form.errors.email" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="current-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
+            <!-- Password -->
+            <div class="group">
+                <div class="mb-1.5 flex items-center justify-between">
+                    <InputLabel for="password" value="Password"
+                        class="block text-xs font-semibold tracking-wide text-gray-500 uppercase" />
+                    <Link v-if="canResetPassword" :href="route('password.request')"
+                        class="text-xs font-medium text-[#1866ed] hover:text-blue-700 transition-colors duration-150">
+                        Forgot password?
+                    </Link>
+                </div>
+                <div class="relative">
+                    <span
+                        class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400 group-focus-within:text-[#1866ed] transition-colors duration-150">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                    </span>
+                    <TextInput id="password" type="password"
+                        class="block w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 shadow-sm transition focus:border-[#1866ed] focus:bg-white focus:ring-2 focus:ring-[#1866ed]/20 focus:outline-none"
+                        v-model="form.password" placeholder="••••••••" required autocomplete="current-password" />
+                </div>
+                <InputError class="mt-1.5 text-xs" :message="form.errors.password" />
             </div>
 
-            <div class="mt-4 block">
-                <label class="flex items-center">
-                    <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
-                        >Remember me</span
-                    >
+            <!-- Remember me -->
+            <div class="flex items-center gap-2.5">
+                <Checkbox id="remember" name="remember" v-model:checked="form.remember"
+                    class="h-4 w-4 rounded border-gray-300 text-[#1866ed] focus:ring-[#1866ed]/30" />
+                <label for="remember" class="cursor-pointer select-none text-sm text-gray-600">
+                    Keep me signed in
                 </label>
             </div>
 
-            <div class="mt-4 flex items-center justify-end">
-                <Link
-                    :href="route('register')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-[#1866ed] focus:outline-none focus:ring-2 focus:ring-[#1866ed] focus:ring-offset-2 mr-4"
-                >
-                    Create an account
-                </Link>
-
-                <Link
-                    v-if="canResetPassword"
-                    :href="route('password.request')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-[#1866ed] focus:outline-none focus:ring-2 focus:ring-[#1866ed] focus:ring-offset-2"
-                >
-                    Forgot your password?
-                </Link>
-
+            <!-- Actions -->
+            <div class="pt-1 space-y-3">
                 <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Log in
+                    class="relative w-full justify-center rounded-xl bg-[#1866ed] py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 hover:shadow-blue-300 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                    :class="{ 'opacity-40': form.processing }" :disabled="form.processing">
+                    <span v-if="form.processing" class="flex items-center gap-2">
+                        <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Signing in…
+                    </span>
+                    <span v-else>Sign in</span>
                 </PrimaryButton>
+
+                <p class="text-center text-sm text-gray-500">
+                    Don't have an account?
+                    <Link :href="route('register')"
+                        class="font-semibold text-[#1866ed] hover:text-blue-700 transition-colors duration-150">
+                        Create one
+                    </Link>
+                </p>
             </div>
+
         </form>
     </GuestLayout>
 </template>

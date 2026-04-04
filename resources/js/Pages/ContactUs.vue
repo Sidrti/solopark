@@ -19,10 +19,13 @@ const form = useForm({
 const submitted = ref(false);
 
 const submit = () => {
-    // In a real app, this would send an email or store in DB
-    // For now, we'll just show a success message
-    submitted.value = true;
-    form.reset();
+    form.post(route('contact.submit'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            submitted.value = true;
+            form.reset();
+        },
+    });
 };
 </script>
 

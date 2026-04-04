@@ -517,33 +517,7 @@ const formatDateTimeShort = (date) => {
 
                         <hr class="border-gray-200 mb-6">
 
-                        <h4 class="text-[16px] font-bold text-gray-900 mb-4">Price Breakdown</h4>
-                        <div class="space-y-3 mb-6">
-                            <div class="flex justify-between items-center text-[15px]">
-                                <span v-if="type === 'monthly'" class="text-gray-600 font-medium">CA${{
-                                    Number(spot.price_monthly ||
-                                    spot.price).toFixed(0) }} x {{ Math.ceil(Math.round((new Date(endDate) - new
-                                        Date(startDate)) / (24 * 60 *
-                                    60 * 1000)) / 30) }} month(s)</span>
-                                <span v-else class="text-gray-600 font-medium">CA${{ (spot.price_hourly / 2).toFixed(0)
-                                    }} x {{ durationUnits
-                                    }} half-hours</span>
-                                <span class="text-gray-900 font-medium">CA${{ baseCost.toFixed(0) }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-[15px]">
-                                <span class="text-gray-600 font-medium">Service Fee ({{ type === 'monthly' ? '30%' :
-                                    '10%' }})</span>
-                                <span class="text-gray-900 font-medium">CA${{ calculatedServiceFee.toFixed(0) }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-[15px]">
-                                <span class="text-gray-600 font-medium">Tax (13%)</span>
-                                <span class="text-gray-900 font-medium">CA${{ tax.toFixed(0) }}</span>
-                            </div>
-                            <div class="flex justify-between items-center text-[15px]">
-                                <span class="text-gray-600 font-medium">Gateway Charges (3%)</span>
-                                <span class="text-gray-900 font-medium">CA${{ gatewayFee.toFixed(0) }}</span>
-                            </div>
-                        </div>
+                        <!-- Price Breakdown removed as requested -->
 
                         <hr class="border-gray-200 mb-5">
 
