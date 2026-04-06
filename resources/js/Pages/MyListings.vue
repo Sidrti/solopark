@@ -139,9 +139,13 @@ const pastBookings = computed(() => {
                                 {{ spot.is_active ? 'Active' : 'Disabled' }}
                             </span>
                         </div>
-                        <div
-                            class="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white font-bold text-gray-900 text-lg shadow-lg">
-                            CA${{ spot.price }}<span class="text-xs font-medium text-gray-500 ml-0.5">/hr</span>
+                        <div class="absolute top-4 right-4 flex flex-col items-end gap-2">
+                            <div class="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white font-bold text-gray-900 text-base shadow-lg">
+                                CA${{ spot.price_hourly }}<span class="text-[10px] font-medium text-gray-500 ml-0.5">/hr</span>
+                            </div>
+                            <div v-if="spot.price_monthly" class="bg-[#1866ed]/90 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-blue-400 font-bold text-white text-base shadow-lg">
+                                CA${{ spot.price_monthly }}<span class="text-[10px] font-medium text-blue-100 ml-0.5">/mo</span>
+                            </div>
                         </div>
                     </div>
 

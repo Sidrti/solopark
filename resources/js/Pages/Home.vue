@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Navbar from '@/Components/Navbar.vue';
@@ -148,6 +148,12 @@ const toggleDay = (day) => {
         recurringDays.value.push(day);
     }
 };
+
+const searchButtonText = computed(() => {
+    if (activeTab.value === 'one-time') return 'Find Parking Spots';
+    if (activeTab.value === 'recurring') return 'Find Recurring Spots';
+    return 'Find Monthly Spots';
+});
 
 const handleSearch = () => {
     const params = {
@@ -353,7 +359,7 @@ const handleSearch = () => {
                         <div class="pt-2">
                             <PrimaryButton
                                 class="w-full text-center flex justify-center py-4 rounded-lg bg-[#1866ed] hover:bg-blue-700 active:bg-blue-800 text-base font-bold shadow-none border border-transparent !px-4">
-                                {{ activeTab === 'one-time' ? 'Find Parking Spots' : (activeTab === 'recurring' ? 'Find Recurring Spots' : 'Find Monthly Spots') }}
+                                {{ searchButtonText }}
                             </PrimaryButton>
                         </div>
                     </form>
@@ -413,7 +419,7 @@ const handleSearch = () => {
                         <div
                             class="w-12 h-12 rounded-xl bg-[#1866ed] flex items-center justify-center mb-6 text-white font-bold text-lg shadow">
                             3</div>
-                        <h3 class="font-bold text-lg text-gray-900 mb-2">Reserve & drive in</h3>
+                        <h3 class="font-bold text-lg text-gray-900 mb-2">Reserve & Park</h3>
                         <p class="text-gray-500 text-sm leading-relaxed">Pay securely online, receive your booking
                             confirmation instantly, and arrive stress‑free — your spot is waiting.</p>
                     </div>
@@ -537,7 +543,7 @@ const handleSearch = () => {
 
        TESTIMONIALS
   ========================================================= -->
-        <section class="bg-white py-20 px-4 sm:px-6 lg:px-8">
+        <!-- <section class="bg-white py-20 px-4 sm:px-6 lg:px-8">
             <div class="max-w-7xl mx-auto">
                 <div class="text-center mb-14">
                     <span
@@ -547,76 +553,73 @@ const handleSearch = () => {
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <!-- Review 1 -->
-                    <div class="bg-[#f5f8ff] rounded-2xl p-7 border border-gray-100">
-                        <div class="flex items-center gap-1 mb-4">
-                            <svg v-for="i in 5" :key="i" class="w-4 h-4 text-[#1866ed]" fill="currentColor"
-                                viewBox="0 0 20 20">
-                                <path
-                                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                        </div>
-                        <p class="text-gray-700 text-sm leading-relaxed mb-5">"I used to waste 20 minutes finding
-                            parking near the ACC before every game. Now I book the night before and walk straight to my
-                            spot. Total game-changer."</p>
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="w-9 h-9 rounded-full bg-[#1866ed] flex items-center justify-center text-white text-sm font-bold">
-                                JK</div>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-900">James K.</p>
-                                <p class="text-xs text-gray-400">Leafs season ticket holder</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Review 2 -->
-                    <div class="bg-[#1866ed] rounded-2xl p-7">
-                        <div class="flex items-center gap-1 mb-4">
-                            <svg v-for="i in 5" :key="i" class="w-4 h-4 text-white opacity-90" fill="currentColor"
-                                viewBox="0 0 20 20">
-                                <path
-                                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                        </div>
-                        <p class="text-white/90 text-sm leading-relaxed mb-5">"The transparent pricing is what sold me.
-                            No hidden fees, no last-minute price jumps. I booked a spot near Union Station for my
-                            commute every day this month."</p>
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-bold">
-                                SM</div>
-                            <div>
-                                <p class="text-sm font-semibold text-white">Sara M.</p>
-                                <p class="text-xs text-white/60">Daily commuter</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Review 3 -->
-                    <div class="bg-[#f5f8ff] rounded-2xl p-7 border border-gray-100">
-                        <div class="flex items-center gap-1 mb-4">
-                            <svg v-for="i in 5" :key="i" class="w-4 h-4 text-[#1866ed]" fill="currentColor"
-                                viewBox="0 0 20 20">
-                                <path
-                                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                        </div>
-                        <p class="text-gray-700 text-sm leading-relaxed mb-5">"Visited Toronto for a conference and had
-                            zero parking stress. Booked from my hotel room the evening before, arrived, drove in.
-                            Couldn't have been smoother."</p>
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="w-9 h-9 rounded-full bg-[#1866ed] flex items-center justify-center text-white text-sm font-bold">
-                                RT</div>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-900">Raj T.</p>
-                                <p class="text-xs text-gray-400">Visitor from Ottawa</p>
-                            </div>
-                        </div>
-                    </div>
+        <!-- <div class="bg-[#f5f8ff] rounded-2xl p-7 border border-gray-100">
+            <div class="flex items-center gap-1 mb-4">
+                <svg v-for="i in 5" :key="i" class="w-4 h-4 text-[#1866ed]" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+            </div>
+            <p class="text-gray-700 text-sm leading-relaxed mb-5">"I used to waste 20 minutes finding
+                parking near the ACC before every game. Now I book the night before and walk straight to my
+                spot. Total game-changer."</p>
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-9 h-9 rounded-full bg-[#1866ed] flex items-center justify-center text-white text-sm font-bold">
+                    JK</div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-900">James K.</p>
+                    <p class="text-xs text-gray-400">Leafs season ticket holder</p>
                 </div>
             </div>
-        </section>
+        </div>
+
+        <div class="bg-[#1866ed] rounded-2xl p-7">
+            <div class="flex items-center gap-1 mb-4">
+                <svg v-for="i in 5" :key="i" class="w-4 h-4 text-white opacity-90" fill="currentColor"
+                    viewBox="0 0 20 20">
+                    <path
+                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+            </div>
+            <p class="text-white/90 text-sm leading-relaxed mb-5">"The transparent pricing is what sold me.
+                No hidden fees, no last-minute price jumps. I booked a spot near Union Station for my
+                commute every day this month."</p>
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-bold">
+                    SM</div>
+                <div>
+                    <p class="text-sm font-semibold text-white">Sara M.</p>
+                    <p class="text-xs text-white/60">Daily commuter</p>
+                </div>
+            </div>
+        </div> -->
+
+        <!-- Review 3 -->
+        <!-- <div class="bg-[#f5f8ff] rounded-2xl p-7 border border-gray-100">
+            <div class="flex items-center gap-1 mb-4">
+                <svg v-for="i in 5" :key="i" class="w-4 h-4 text-[#1866ed]" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+            </div>
+            <p class="text-gray-700 text-sm leading-relaxed mb-5">"Visited Toronto for a conference and had
+                zero parking stress. Booked from my hotel room the evening before, arrived, drove in.
+                Couldn't have been smoother."</p>
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-9 h-9 rounded-full bg-[#1866ed] flex items-center justify-center text-white text-sm font-bold">
+                    RT</div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-900">Raj T.</p>
+                    <p class="text-xs text-gray-400">Visitor from Ottawa</p>
+                </div>
+            </div>
+        </div> -->
+        <!-- </div>
+    </div>
+    </section>  -->
 
         <!-- =========================================================
        LIST YOUR SPOT CTA  (for parking space owners)
@@ -647,20 +650,20 @@ const handleSearch = () => {
 
                     <div class="grid grid-cols-2 gap-5">
                         <div class="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-2">
-                            <span class="text-3xl font-bold text-white">$400+</span>
-                            <span class="text-gray-400 text-sm">Average monthly earnings per spot</span>
+                            <span class="text-3xl font-bold text-white">Book ahead</span>
+                            <span class="text-gray-400 text-sm">Reserve before you arrive</span>
                         </div>
                         <div class="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-2">
-                            <span class="text-3xl font-bold text-white">Free</span>
-                            <span class="text-gray-400 text-sm">No upfront cost to list your space</span>
+                            <span class="text-3xl font-bold text-white">Know the cost</span>
+                            <span class="text-gray-400 text-sm">See pricing upfront</span>
                         </div>
                         <div class="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-2">
-                            <span class="text-3xl font-bold text-white">You're in control</span>
-                            <span class="text-gray-400 text-sm">Set your own hours & availability</span>
+                            <span class="text-3xl font-bold text-white">Choose your stay </span>
+                            <span class="text-gray-400 text-sm">Hourly, daily, or monthly</span>
                         </div>
                         <div class="bg-[#1866ed]/30 border border-[#1866ed]/40 rounded-2xl p-6 flex flex-col gap-2">
-                            <span class="text-3xl font-bold text-white">Fast payout</span>
-                            <span class="text-gray-400 text-sm">Weekly direct deposit to your bank</span>
+                            <span class="text-3xl font-bold text-white">Pay Securly</span>
+                            <span class="text-gray-400 text-sm">Simple and secure checkout</span>
                         </div>
                     </div>
                 </div>

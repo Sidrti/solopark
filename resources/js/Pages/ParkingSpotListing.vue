@@ -71,6 +71,16 @@ const endTimeOneTime = ref(props.end || formatDt(new Date(new Date().getTime() +
 
 const addressInput = ref(null);
 
+// If lat/lng are passed, use them for the map center, otherwise default to Toronto
+const mapLat = props.lat ? parseFloat(props.lat) : 43.6507;
+const mapLng = props.lng ? parseFloat(props.lng) : -79.3830;
+const mapCenter = ref({ lat: mapLat, lng: mapLng });
+
+// Use backend data if available, fallback to mock if completely empty
+const parkingSpots = ref(props.spots);
+const userLocation = ref(null);
+const mapRef = ref(null);
+
 onMounted(() => {
     const initAutocomplete = () => {
         if (!addressInput.value) return;
@@ -84,6 +94,8 @@ onMounted(() => {
             if (place.geometry) {
                 searchLat.value = place.geometry.location.lat();
                 searchLng.value = place.geometry.location.lng();
+                // Update map center when a new location is searched
+                mapCenter.value = { lat: searchLat.value, lng: searchLng.value };
             }
         });
     };
@@ -94,7 +106,28 @@ onMounted(() => {
         // Fallback for async load
         setTimeout(initAutocomplete, 2000);
     }
+
+    // Get user's current location
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                userLocation.value = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+            },
+            (error) => {
+                console.error("Error getting geolocation: ", error);
+            }
+        );
+    }
 });
+
+const centerOnUser = () => {
+    if (userLocation.value) {
+        mapCenter.value = { ...userLocation.value };
+    }
+};
 
 const handleUpdateSearch = () => {
     const params = {
@@ -120,14 +153,6 @@ const handleUpdateSearch = () => {
 };
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-
-// If lat/lng are passed, use them for the map center, otherwise default to Toronto
-const mapLat = props.lat ? parseFloat(props.lat) : 43.6507;
-const mapLng = props.lng ? parseFloat(props.lng) : -79.3830;
-const mapCenter = { lat: mapLat, lng: mapLng };
-
-// Use backend data if available, fallback to mock if completely empty
-const parkingSpots = ref(props.spots);
 
 const formatDateTimeShort = (dateStr) => {
     const date = new Date(dateStr);
@@ -299,7 +324,15 @@ const formatDateTimeShort = (dateStr) => {
                 <div class="hidden md:block md:w-7/12 lg:w-8/12 xl:flex-1 h-full relative bg-[#e5e7eb] overflow-hidden">
                     <GoogleMap :api-key="GOOGLE_MAPS_API_KEY" style="width: 100%; height: 100%" :center="mapCenter"
                         :zoom="15" :disableDefaultUI="true">
-                        <!-- Destination marker (e.g. at mapCenter) -->
+                        <!-- Driver Location (Blue Dot) -->
+                        <CustomMarker v-if="userLocation" :options="{ position: userLocation }">
+                            <div class="relative flex items-center justify-center">
+                                <div class="absolute w-8 h-8 bg-blue-500/20 rounded-full animate-ping"></div>
+                                <div class="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg"></div>
+                            </div>
+                        </CustomMarker>
+
+                        <!-- Destination marker (e.g. at searched lat/lng) -->
                         <CustomMarker :options="{ position: mapCenter }">
                             <div class="transform -translate-x-1/2 -translate-y-1/2">
                                 <svg class="w-[32px] h-[32px] text-red-500 drop-shadow-lg" fill="currentColor"
@@ -316,13 +349,23 @@ const formatDateTimeShort = (dateStr) => {
                             :options="{ position: { lat: spot.lat, lng: spot.lng } }">
                             <div
                                 class="bg-white border border-gray-300 rounded-[20px] px-2.5 py-1 font-bold text-[13px] text-gray-900 shadow-[0_2px_6px_rgba(0,0,0,0.2)] cursor-pointer hover:bg-[#1866ed] hover:text-white hover:z-50 hover:border-[#1866ed] transition-all duration-200 transform hover:scale-110">
-                                ${{ Math.floor(spot.price) }}
+                                CA${{ Math.floor(spot.price) }}
                             </div>
                         </CustomMarker>
                     </GoogleMap>
 
                     <!-- Custom Map Controls overlaid on top of Google Map -->
                     <div class="absolute top-5 right-5 flex flex-col space-y-2 pointer-events-none">
+                        <button
+                            @click="centerOnUser"
+                            class="bg-white p-2 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.1)] hover:bg-gray-50 text-blue-600 transition w-10 h-10 flex items-center justify-center pointer-events-auto mb-2"
+                            title="Recenter on me"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                        </button>
                         <button
                             class="bg-white p-2 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.1)] hover:bg-gray-50 text-gray-700 transition w-9 h-9 flex items-center justify-center pointer-events-auto">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
