@@ -11,8 +11,14 @@ import { Link } from '@inertiajs/vue3';
                     <Link :href="route('contact-us')" class="hover:text-white transition-colors">Contact Us</Link>
                 </div>
                 <p class="flex items-center gap-1.5">
-                    Proudly Canadian
-                    <!-- <span class="text-base select-none">🇨🇦</span> -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 256" class="w-4 h-4">
+                        <rect width="128" height="256" fill="#D80621" />
+                        <rect x="384" width="128" height="256" fill="#D80621" />
+                        <rect x="128" width="256" height="256" fill="#ffffff" />
+                        <path fill="#D80621"
+                            d="M256 60l18 40 44-10-26 36 36 14-44 10 8 44-36-26-36 26 8-44-44-10 36-14-26-36 44 10z" />
+                    </svg>
+                    <span>Proudly Canadian</span>
                 </p>
             </div>
         </div>

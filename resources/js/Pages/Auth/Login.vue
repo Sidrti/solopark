@@ -116,6 +116,34 @@ const submit = () => {
                     <span v-else>Sign in</span>
                 </PrimaryButton>
 
+                <div class="relative py-2">
+                    <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                        <div class="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div
+                        class="relative flex justify-center text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                        <span class="bg-[#fcfdff] px-2">Or continue with</span>
+                    </div>
+                </div>
+
+                <a :href="route('auth.google')"
+                    class="flex w-full items-center justify-center gap-2.5 rounded-xl border border-gray-200 bg-white py-2.5 text-sm font-bold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98]">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20" height="20">
+                        <path fill="#EA4335"
+                            d="M24 9.5c3.54 0 6.73 1.22 9.24 3.61l6.9-6.9C35.64 2.3 30.2 0 24 0 14.62 0 6.36 5.48 2.56 13.44l8.04 6.24C12.52 13.1 17.77 9.5 24 9.5z" />
+
+                        <path fill="#34A853"
+                            d="M46.5 24c0-1.64-.15-3.21-.42-4.72H24v9.02h12.7c-.55 2.96-2.2 5.47-4.7 7.16l7.24 5.62C43.84 36.54 46.5 30.83 46.5 24z" />
+
+                        <path fill="#4285F4"
+                            d="M10.6 28.32A14.5 14.5 0 0 1 9.5 24c0-1.5.26-2.95.73-4.32l-8.04-6.24A23.88 23.88 0 0 0 0 24c0 3.85.92 7.49 2.56 10.56l8.04-6.24z" />
+
+                        <path fill="#FBBC05"
+                            d="M24 48c6.48 0 11.92-2.13 15.89-5.78l-7.24-5.62c-2.02 1.36-4.6 2.15-8.65 2.15-6.23 0-11.48-3.6-13.4-8.82l-8.04 6.24C6.36 42.52 14.62 48 24 48z" />
+                    </svg>
+                    Google
+                </a>
+
                 <p class="text-center text-sm text-gray-500">
                     Don't have an account?
                     <Link :href="route('register')"
