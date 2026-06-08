@@ -185,7 +185,7 @@ const handleSearch = () => {
 
 <template>
 
-    <Head title="Find and reserve parking in Canada" />
+    <Head title="Find and reserve parking in Toronto, Canada" />
 
     <div class="min-h-screen bg-white font-sans text-gray-900 selection:bg-[#1866ed] selection:text-white">
         <!-- Navigation Bar -->
@@ -205,7 +205,7 @@ const handleSearch = () => {
                     </div> -->
 
                     <h1 class="text-4xl sm:text-[3rem] font-bold leading-[1.1] text-gray-900 mb-8 tracking-tight">
-                        Find and reserve parking in Canada
+                        Find Parking. <br> List your space.
                     </h1>
 
                     <!-- Search Form -->
@@ -214,13 +214,13 @@ const handleSearch = () => {
                             'flex-1 py-2 text-[14px] font-bold rounded-lg transition-all',
                             activeTab === 'one-time' ? 'bg-white text-[#1866ed] shadow-sm' : 'text-gray-500 hover:text-gray-700'
                         ]">
-                            One Time
+                            Hourly
                         </button>
                         <button type="button" @click="activeTab = 'recurring'" :class="[
                             'flex-1 py-2 text-[14px] font-bold rounded-lg transition-all',
                             activeTab === 'recurring' ? 'bg-white text-[#1866ed] shadow-sm' : 'text-gray-500 hover:text-gray-700'
                         ]">
-                            Recurring
+                            Daily
                         </button>
                         <button type="button" @click="activeTab = 'monthly'" :class="[
                             'flex-1 py-2 text-[14px] font-bold rounded-lg transition-all',
@@ -419,7 +419,7 @@ const handleSearch = () => {
                         <div
                             class="w-12 h-12 rounded-xl bg-[#1866ed] flex items-center justify-center mb-6 text-white font-bold text-lg shadow">
                             3</div>
-                        <h3 class="font-bold text-lg text-gray-900 mb-2">Reserve & Park</h3>
+                        <h3 class="font-bold text-lg text-gray-900 mb-2">Reserve & Get</h3>
                         <p class="text-gray-500 text-sm leading-relaxed">Pay securely online, receive your booking
                             confirmation instantly, and arrive stress‑free — your spot is waiting.</p>
                     </div>
@@ -432,109 +432,67 @@ const handleSearch = () => {
   ========================================================= -->
         <section class="bg-white py-20 px-4 sm:px-6 lg:px-8">
             <div class="max-w-7xl mx-auto">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <div class="text-center max-w-3xl mx-auto mb-16">
+                    <span class="inline-block text-xs font-bold uppercase tracking-widest text-[#1866ed] mb-3">Why SoloPark</span>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">Everything you need, nothing you don't</h2>
+                </div>
 
-                    <!-- Left: feature list -->
-                    <div>
-                        <span class="inline-block text-xs font-bold uppercase tracking-widest text-[#1866ed] mb-3">Why
-                            SoloPark</span>
-                        <h2 class="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight mb-10">Everything you
-                            need, nothing you don't</h2>
-
-                        <div class="space-y-7">
-                            <div class="flex gap-5 items-start">
-                                <div
-                                    class="flex-shrink-0 w-10 h-10 rounded-lg bg-[#eef3fd] flex items-center justify-center">
-                                    <!-- Lock icon -->
-                                    <svg class="w-5 h-5 text-[#1866ed]" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 mb-1">Guaranteed reservation</h4>
-                                    <p class="text-gray-500 text-sm leading-relaxed">Your spot is locked the moment you
-                                        book — no more circling the block or arriving to find it taken.</p>
-                                </div>
-                            </div>
-
-                            <div class="flex gap-5 items-start">
-                                <div
-                                    class="flex-shrink-0 w-10 h-10 rounded-lg bg-[#eef3fd] flex items-center justify-center">
-                                    <!-- Dollar icon -->
-                                    <svg class="w-5 h-5 text-[#1866ed]" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 mb-1">Transparent pricing</h4>
-                                    <p class="text-gray-500 text-sm leading-relaxed">See the full price upfront — no
-                                        surprise fees at the gate. What you see is exactly what you pay.</p>
-                                </div>
-                            </div>
-
-                            <div class="flex gap-5 items-start">
-                                <div
-                                    class="flex-shrink-0 w-10 h-10 rounded-lg bg-[#eef3fd] flex items-center justify-center">
-                                    <!-- Clock icon -->
-                                    <svg class="w-5 h-5 text-[#1866ed]" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 mb-1">Flexible duration</h4>
-                                    <p class="text-gray-500 text-sm leading-relaxed">Book by the hour or for the whole
-                                        day. Extend your session on the go right from your phone.</p>
-                                </div>
-                            </div>
-
-                            <div class="flex gap-5 items-start">
-                                <div
-                                    class="flex-shrink-0 w-10 h-10 rounded-lg bg-[#eef3fd] flex items-center justify-center">
-                                    <!-- Shield icon -->
-                                    <svg class="w-5 h-5 text-[#1866ed]" fill="none" stroke="currentColor"
-                                        viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 mb-1">Secure payments</h4>
-                                    <p class="text-gray-500 text-sm leading-relaxed">All transactions are encrypted and
-                                        PCI-compliant. Pay with any major card or digital wallet.</p>
-                                </div>
-                            </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10 max-w-5xl mx-auto">
+                    <!-- Feature 1 -->
+                    <div class="flex gap-5 items-start p-6 bg-gray-50/50 hover:bg-gray-50 rounded-2xl border border-gray-100/50 transition-all duration-200">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-[#eef3fd] flex items-center justify-center text-[#1866ed]">
+                            <!-- Lock icon -->
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-900 mb-1.5 text-[16px]">Guaranteed reservation</h4>
+                            <p class="text-gray-500 text-[14px] leading-relaxed">Your spot is locked the moment you book — no more circling the block or arriving to find it taken.</p>
                         </div>
                     </div>
 
-                    <!-- Right: stat cards -->
-                    <div class="grid grid-cols-2 gap-5">
-                        <div
-                            class="bg-[#1866ed] rounded-2xl p-7 text-white flex flex-col justify-between min-h-[160px]">
-                            <span class="text-4xl font-bold leading-none">500+</span>
-                            <span class="text-sm font-medium opacity-80 mt-3">Parking locations across Canada</span>
+                    <!-- Feature 2 -->
+                    <div class="flex gap-5 items-start p-6 bg-gray-50/50 hover:bg-gray-50 rounded-2xl border border-gray-100/50 transition-all duration-200">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-[#eef3fd] flex items-center justify-center text-[#1866ed]">
+                            <!-- Dollar icon -->
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
                         </div>
-                        <div
-                            class="bg-[#f5f8ff] rounded-2xl p-7 flex flex-col justify-between min-h-[160px] border border-gray-100">
-                            <span class="text-4xl font-bold leading-none text-gray-900">50k+</span>
-                            <span class="text-sm font-medium text-gray-500 mt-3">Happy drivers parked so far</span>
-                        </div>
-                        <div
-                            class="bg-[#f5f8ff] rounded-2xl p-7 flex flex-col justify-between min-h-[160px] border border-gray-100">
-                            <span class="text-4xl font-bold leading-none text-gray-900">4.9★</span>
-                            <span class="text-sm font-medium text-gray-500 mt-3">Average rating from our users</span>
-                        </div>
-                        <div class="bg-gray-900 rounded-2xl p-7 text-white flex flex-col justify-between min-h-[160px]">
-                            <span class="text-4xl font-bold leading-none">24/7</span>
-                            <span class="text-sm font-medium opacity-70 mt-3">Customer support, always on</span>
+                        <div>
+                            <h4 class="font-bold text-gray-900 mb-1.5 text-[16px]">Transparent pricing</h4>
+                            <p class="text-gray-500 text-[14px] leading-relaxed">See the full price upfront — no surprise fees at the gate. What you see is exactly what you pay.</p>
                         </div>
                     </div>
 
+                    <!-- Feature 3 -->
+                    <div class="flex gap-5 items-start p-6 bg-gray-50/50 hover:bg-gray-50 rounded-2xl border border-gray-100/50 transition-all duration-200">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-[#eef3fd] flex items-center justify-center text-[#1866ed]">
+                            <!-- Clock icon -->
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-900 mb-1.5 text-[16px]">Flexible duration</h4>
+                            <p class="text-gray-500 text-[14px] leading-relaxed">Book by the hour or for the whole day. Extend your session on the go right from your phone.</p>
+                        </div>
+                    </div>
+
+                    <!-- Feature 4 -->
+                    <div class="flex gap-5 items-start p-6 bg-gray-50/50 hover:bg-gray-50 rounded-2xl border border-gray-100/50 transition-all duration-200">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-[#eef3fd] flex items-center justify-center text-[#1866ed]">
+                            <!-- Shield icon -->
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-900 mb-1.5 text-[16px]">Secure payments</h4>
+                            <p class="text-gray-500 text-[14px] leading-relaxed">Pay safely online by card or digital wallet. Your payment is handled through a secure payment provider.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

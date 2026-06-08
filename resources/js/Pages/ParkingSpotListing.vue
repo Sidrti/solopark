@@ -2,7 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, onMounted, computed } from 'vue';
 import Navbar from '@/Components/Navbar.vue';
-import { GoogleMap, CustomMarker } from 'vue3-google-map';
+import { GoogleMap, CustomMarker, Circle } from 'vue3-google-map';
 
 const props = defineProps({
     canLogin: {
@@ -287,7 +287,7 @@ const formatDateTimeShort = (dateStr) => {
                                                         d="M13.73 21a2 2 0 01-3.46 0m2-18v3m-7.88 2.37l2.6 1.5m10.56-1.5l-2.6 1.5M4.93 17.65l2.6-1.5m10.56 1.5l-2.6-1.5M12 11v3">
                                                     </path>
                                                 </svg>
-                                                {{ spot.walk }} <span class="mx-1">•</span> {{ spot.dist }} mi
+                                                {{ spot.walk }} <span class="mx-1">•</span> {{ spot.dist }} km
                                             </div>
                                         </div>
                                         <div class="text-right shrink-0">
@@ -344,11 +344,27 @@ const formatDateTimeShort = (dateStr) => {
                             </div>
                         </CustomMarker>
 
+                        <!-- Approximate Location Circles (500m radius) -->
+                        <Circle v-for="(spot, i) in parkingSpots" :key="'circle' + i" :options="{
+                            center: { lat: parseFloat(spot.lat), lng: parseFloat(spot.lng) },
+                            radius: 500,
+                            strokeColor: spot.dummy ? '#6b7280' : '#1866ed',
+                            strokeOpacity: 0.35,
+                            strokeWeight: 1,
+                            fillColor: spot.dummy ? '#6b7280' : '#1866ed',
+                            fillOpacity: 0.12
+                        }" />
+
                         <!-- Pins -->
                         <CustomMarker v-for="(spot, i) in parkingSpots" :key="'pin' + i"
-                            :options="{ position: { lat: spot.lat, lng: spot.lng } }">
+                            :options="{ position: { lat: parseFloat(spot.lat), lng: parseFloat(spot.lng) } }">
                             <div
-                                class="bg-white border border-gray-300 rounded-[20px] px-2.5 py-1 font-bold text-[13px] text-gray-900 shadow-[0_2px_6px_rgba(0,0,0,0.2)] cursor-pointer hover:bg-[#1866ed] hover:text-white hover:z-50 hover:border-[#1866ed] transition-all duration-200 transform hover:scale-110">
+                                :class="[
+                                    'rounded-[20px] px-2.5 py-1 font-bold text-[13px] shadow-[0_2px_6px_rgba(0,0,0,0.2)] transition-all duration-200 transform',
+                                    spot.dummy 
+                                        ? 'bg-gray-200 border border-gray-400 text-gray-500 cursor-not-allowed line-through' 
+                                        : 'bg-white border border-gray-300 text-gray-900 cursor-pointer hover:bg-[#1866ed] hover:text-white hover:z-50 hover:border-[#1866ed] hover:scale-110'
+                                ]">
                                 CA${{ Math.floor(spot.price) }}
                             </div>
                         </CustomMarker>

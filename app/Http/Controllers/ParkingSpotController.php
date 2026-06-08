@@ -17,35 +17,36 @@ class ParkingSpotController extends Controller
             ->latest()
             ->get()
             ->map(function ($spot) {
-            $photos = $spot->relationLoaded('photos') ? $spot->getRelation('photos') : collect([]);
-            $firstPhoto = $photos->first();
+                $photos = $spot->relationLoaded('photos') ? $spot->getRelation('photos') : collect([]);
+                $firstPhoto = $photos->first();
 
-            $bookings = $spot->bookings->map(function ($booking) {
-                    return [
-                    'id' => $booking->id,
-                    'customer' => $booking->user->name,
-                    'email' => $booking->user->email,
-                    'start_time' => $booking->start_time,
-                    'end_time' => $booking->end_time,
-                    'subtotal' => $booking->subtotal,
-                    'service_fee' => $booking->service_fee,
-                    'tax' => $booking->tax,
-                    'gateway_fee' => $booking->gateway_fee,
-                    'total_price' => round($booking->total_price, 0),
-                    'status' => $booking->status,
-                    ];
-                }
+                $bookings = $spot->bookings->map(
+                    function ($booking) {
+                        return [
+                            'id' => $booking->id,
+                            'customer' => $booking->user->name,
+                            'email' => $booking->user->email,
+                            'start_time' => $booking->start_time,
+                            'end_time' => $booking->end_time,
+                            'subtotal' => $booking->subtotal,
+                            'service_fee' => $booking->service_fee,
+                            'tax' => $booking->tax,
+                            'gateway_fee' => $booking->gateway_fee,
+                            'total_price' => round($booking->total_price, 0),
+                            'status' => $booking->status,
+                        ];
+                    }
                 );
 
                 return [
-                'id' => $spot->id,
-                'title' => $spot->title,
-                'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
-                'price_hourly' => $spot->price_hourly,
-                'price_monthly' => $spot->price_monthly,
-                'is_active' => $spot->is_active,
-                'bookings' => $bookings,
-                'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=400',
+                    'id' => $spot->id,
+                    'title' => $spot->title,
+                    'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
+                    'price_hourly' => $spot->price_hourly,
+                    'price_monthly' => $spot->price_monthly,
+                    'is_active' => $spot->is_active,
+                    'bookings' => $bookings,
+                    'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=400',
                 ];
             });
 
@@ -72,10 +73,9 @@ class ParkingSpotController extends Controller
 
         if ($lat && $lng) {
             $query->select('*')
-                ->selectRaw("(3959 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance", [$latitude, $longitude, $latitude])
+                ->selectRaw("(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance", [$latitude, $longitude, $latitude])
                 ->orderBy('distance');
-        }
-        else {
+        } else {
             $query->latest();
         }
 
@@ -106,12 +106,10 @@ class ParkingSpotController extends Controller
                     $q->where('start_time', '<', $endUtc)
                         ->where('end_time', '>', $startUtc);
                 });
+            } catch (\Exception $e) {
+                // Ignore parsing errors
             }
-            catch (\Exception $e) {
-            // Ignore parsing errors
-            }
-        }
-        elseif ($searchType === 'recurring') {
+        } elseif ($searchType === 'recurring') {
             $startDate = $request->input('startDate');
             $endDate = $request->input('endDate');
             $startTime = $request->input('startTime');
@@ -127,14 +125,16 @@ class ParkingSpotController extends Controller
                     // and have NO overlapping bookings on ANY of those days
                     $query->where(function ($q) use ($days, $startTime, $endTime, $startDate, $endDate, $timezone) {
                         foreach ($days as $day) {
-                            $q->whereHas('availabilities', function ($subQ) use ($day, $startTime, $endTime) {
-                                        $subQ->where('day_of_week', $day)
-                                            ->where('start_time', '<=', $startTime)
-                                            ->where('end_time', '>=', $endTime);
-                                    }
-                                    );
+                            $q->whereHas(
+                                'availabilities',
+                                function ($subQ) use ($day, $startTime, $endTime) {
+                                    $subQ->where('day_of_week', $day)
+                                        ->where('start_time', '<=', $startTime)
+                                        ->where('end_time', '>=', $endTime);
                                 }
-                            });
+                            );
+                        }
+                    });
 
                     // Check for overlaps on each requested day in the range
                     $current = \Carbon\Carbon::parse($startDate, $timezone);
@@ -152,18 +152,16 @@ class ParkingSpotController extends Controller
                         }
                         $current->addDay();
                     }
-                }
-                catch (\Exception $e) {
-                // Ignore parsing errors
+                } catch (\Exception $e) {
+                    // Ignore parsing errors
                 }
             }
-        }
-        elseif ($searchType === 'monthly') {
+        } elseif ($searchType === 'monthly') {
             $query->whereNotNull('price_monthly');
-            
+
             $startDate = $request->input('startDate');
             $endDate = $request->input('endDate');
-            
+
             if ($startDate && $endDate) {
                 // For monthly, we simply check if there are any overlapping bookings (regardless of one-time/recurring/monthly)
                 // because a monthly booking usually implies 24/7 reservation of the space.
@@ -181,10 +179,9 @@ class ParkingSpotController extends Controller
             $photos = $spot->relationLoaded('photos') ? $spot->getRelation('photos') : collect([]);
             $firstPhoto = $photos->first();
 
-            $distMiles = $spot->distance ?? 0;
-            $speedKmh = 40;
-            $speedMph = $speedKmh / 1.60934;
-            $walkMinutes = $speedMph > 0 ? round(($distMiles / $speedMph) * 60) : 0;
+            $distKm = $spot->distance ?? 0;
+            $speedKmh = 5; // Average walking speed in km/h
+            $walkMinutes = $speedKmh > 0 ? round(($distKm / $speedKmh) * 60) : 0;
 
             // Calculate Final Price Including Fees and Taxes
             $baseCost = 0;
@@ -211,23 +208,23 @@ class ParkingSpotController extends Controller
                 }
                 $baseCost = ($spot->price_hourly / 2) * $durationUnits;
             } else {
-                 // Recurring
+                // Recurring
                 $startDate = $request->input('startDate');
                 $endDate = $request->input('endDate');
                 $startTime = $request->input('startTime');
                 $endTime = $request->input('endTime');
                 $days = explode(',', $request->input('days', ''));
-                
+
                 $durationUnits = 0;
                 if ($startDate && $endDate && $startTime && $endTime && !empty($days)) {
                     $startRange = \Carbon\Carbon::parse($startDate, $timezone);
                     $endRange = \Carbon\Carbon::parse($endDate, $timezone);
-                    
+
                     $sParts = explode(':', $startTime);
                     $eParts = explode(':', $endTime);
                     $dailyMinutes = ($eParts[0] * 60 + $eParts[1]) - ($sParts[0] * 60 + $sParts[1]);
                     $dailyUnits = max(0, ceil($dailyMinutes / 30));
-                    
+
                     $current = $startRange->copy();
                     while ($current->lte($endRange)) {
                         if (in_array($current->format('D'), $days)) {
@@ -236,25 +233,41 @@ class ParkingSpotController extends Controller
                         $current->addDay();
                     }
                 }
-                if ($durationUnits == 0) $durationUnits = 2;
+                if ($durationUnits == 0)
+                    $durationUnits = 2;
                 $baseCost = ($spot->price_hourly / 2) * $durationUnits;
             }
 
             $serviceRate = ($searchType === 'monthly') ? 0.30 : 0.10;
             $finalPrice = $baseCost * (1 + $serviceRate) * 1.13 * 1.03;
 
+            // Deterministic hash-based offset to obfuscate exact lat/lng on search map
+            $seed = crc32($spot->id);
+            mt_srand($seed);
+            $latOffset = (mt_rand(-120, 120) / 100000);
+            $lngOffset = (mt_rand(-120, 120) / 100000);
+            mt_srand(); // reset seed randomizer
+
+            $approxLat = $spot->latitude + $latOffset;
+            $approxLng = $spot->longitude + $lngOffset;
+
+            // Obfuscate exact street address (e.g. "123 Matheson Blvd" -> "Near Matheson Blvd")
+            $approxAddress = preg_replace('/^\d+\s+/', 'Near ', $spot->address);
+            $displayAddress = $approxAddress . ($spot->city ? ', ' . $spot->city : '');
+
             return [
                 'id' => $spot->id,
-                'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
+                'address' => $displayAddress,
                 'rating' => 4.5,
                 'reviews' => 10,
                 'walk' => $walkMinutes . ' min',
                 'dist' => isset($spot->distance) ? number_format($spot->distance, 1) : '0.0',
                 'price' => round($finalPrice, 0),
-                'badge' => $searchType === 'monthly' ? 'Monthly' : null,
+                'badge' => $spot->dummy ? 'Booked' : ($searchType === 'monthly' ? 'Monthly' : null),
                 'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=400',
-                'lat' => $spot->latitude,
-                'lng' => $spot->longitude,
+                'lat' => $approxLat,
+                'lng' => $approxLng,
+                'dummy' => (bool)$spot->dummy,
             ];
         });
 
@@ -297,6 +310,9 @@ class ParkingSpotController extends Controller
             'longitude' => 'nullable|numeric',
             'photos' => 'nullable|array',
             'photos.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
+            'contact_number' => 'required|string|regex:/^\(\d{3}\) \d{3}-\d{4}$/',
+        ], [
+            'contact_number.regex' => 'The contact number must be a valid 10-digit Canadian phone number in the format (555) 555-5555.',
         ]);
 
         $spot = ParkingSpot::create([
@@ -314,6 +330,7 @@ class ParkingSpotController extends Controller
             'is_24_7' => $validated['is24_7'] ?? false,
             'features' => $validated['features'] ?? [],
             'additional_points' => $validated['additionalPoints'] ?? [],
+            'contact_number' => $validated['contact_number'],
         ]);
 
         if (!empty($validated['selectedDays'])) {
@@ -341,7 +358,7 @@ class ParkingSpotController extends Controller
             }
         }
 
-        return redirect()->route('search')->with('success', 'Parking spot listed successfully!');
+        return redirect()->back()->with('success', 'Parking spot listed successfully!');
     }
 
     public function show($id, Request $request)
@@ -361,8 +378,7 @@ class ParkingSpotController extends Controller
             $firstAvail = $spot->availabilities->first();
             try {
                 $availHours = \Carbon\Carbon::parse($firstAvail->start_time)->format('h:i A') . ' - ' . \Carbon\Carbon::parse($firstAvail->end_time)->format('h:i A');
-            }
-            catch (\Exception $e) {
+            } catch (\Exception $e) {
                 $availHours = $firstAvail->start_time . ' - ' . $firstAvail->end_time;
             }
         }
@@ -485,6 +501,7 @@ class ParkingSpotController extends Controller
                 'is_24_7' => $spot->is_24_7,
                 'features' => $spot->features,
                 'additional_points' => $spot->additional_points,
+                'contact_number' => $spot->contact_number,
                 'selectedDays' => $availDays,
                 'availFrom' => $startTime ? \Carbon\Carbon::parse($startTime)->format('H:i') : '',
                 'availTo' => $endTime ? \Carbon\Carbon::parse($endTime)->format('H:i') : '',
@@ -521,7 +538,10 @@ class ParkingSpotController extends Controller
             'photos' => 'nullable|array',
             'photos.*' => 'image|mimes:jpeg,png,jpg,gif|max:5120',
             'removePhotos' => 'nullable|array',
-            'removePhotos.*' => 'exists:parking_spot_photos,id'
+            'removePhotos.*' => 'exists:parking_spot_photos,id',
+            'contact_number' => 'required|string|regex:/^\(\d{3}\) \d{3}-\d{4}$/',
+        ], [
+            'contact_number.regex' => 'The contact number must be a valid 10-digit Canadian phone number in the format (555) 555-5555.',
         ]);
 
         $spot->update([
@@ -538,6 +558,7 @@ class ParkingSpotController extends Controller
             'is_24_7' => $validated['is24_7'] ?? false,
             'features' => $validated['features'] ?? [],
             'additional_points' => $validated['additionalPoints'] ?? [],
+            'contact_number' => $validated['contact_number'],
         ]);
 
         // Update availabilities

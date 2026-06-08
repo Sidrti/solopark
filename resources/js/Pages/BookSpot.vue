@@ -541,11 +541,11 @@ const formatDateTimeShort = (date) => {
                             <span v-else>Complete Reservation</span>
                         </button>
 
-                        <!-- <p class="text-center text-[12px] text-gray-500 leading-relaxed px-2 font-medium mt-4">
-                            By clicking "Complete Reservation", you agree to Solopark's <a href="#"
-                                class="underline hover:text-gray-800">Terms of Service</a> and <a href="#"
+                        <p class="text-center text-[12px] text-gray-500 leading-relaxed px-2 font-medium mt-4">
+                            By clicking "Complete Reservation", you agree to Solopark's <Link :href="route('terms')"
+                                class="underline hover:text-gray-800">Terms of Service</Link> and <a href="#"
                                 class="underline hover:text-gray-800">Privacy Policy</a>.
-                        </p> -->
+                        </p>
                     </div>
                 </div>
 
