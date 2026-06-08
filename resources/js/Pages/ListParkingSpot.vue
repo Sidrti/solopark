@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import { ref, watch, onMounted } from 'vue';
 import Navbar from '@/Components/Navbar.vue';
 
@@ -34,6 +34,7 @@ const form = useForm({
         disabledAccess: false,
     },
     photos: [],
+    contact_number: '',
 });
 
 watch(() => form.is24_7, (is247) => {
@@ -53,7 +54,23 @@ watch(() => form.is24_7, (is247) => {
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const newPoint = ref('');
 const successSnack = ref(false);
+const showSuccessModal = ref(false);
 const addressInput = ref(null);
+
+const formatMobile = () => {
+    const cleaned = form.contact_number.replace(/\D/g, '').substring(0, 10);
+    const match = cleaned.match(/(\d{0,3})(\d{0,3})(\d{0,4})/);
+    if (!match) {
+        form.contact_number = '';
+    } else {
+        form.contact_number = !match[2] ? match[1] : '(' + match[1] + ') ' + match[2] + (match[3] ? '-' + match[3] : '');
+    }
+};
+
+const goToMyListings = () => {
+    showSuccessModal.value = false;
+    router.visit(route('spots.my-listings'));
+};
 
 onMounted(() => {
     const initAutocomplete = () => {
@@ -137,10 +154,7 @@ const submitListing = () => {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
-            successSnack.value = true;
-            setTimeout(() => {
-                successSnack.value = false;
-            }, 3000);
+            showSuccessModal.value = true;
         },
         onError: (errors) => {
             console.error('Validation Errors:', errors);
@@ -201,6 +215,21 @@ const submitListing = () => {
                         </div>
                     </div>
 
+                    <div class="mb-6">
+                        <label class="block text-[14px] font-bold text-gray-900 mb-2">Host Phone Number</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-[15px]">+1</span>
+                                <div class="h-5 w-px bg-gray-300 mx-2"></div>
+                            </div>
+                            <input type="tel" v-model="form.contact_number" @input="formatMobile" :class="[
+                                'pl-[52px] block w-full rounded-lg shadow-sm sm:text-[15px] h-[52px] placeholder-gray-400',
+                                form.errors.contact_number ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-[#1866ed] focus:ring-[#1866ed]'
+                            ]" placeholder="(555) 000-0000" required />
+                        </div>
+                        <p v-if="form.errors.contact_number" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.contact_number }}</p>
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-2">
                         <div>
                             <label class="block text-[14px] font-bold text-gray-900 mb-2">Parking Type</label>
@@ -223,7 +252,7 @@ const submitListing = () => {
                                 </div>
                                 <input type="number" v-model="form.price" step="0.01" min="0"
                                     class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]"
-                                    placeholder="5.00" required />
+                                    placeholder="4" required />
                             </div>
                         </div>
                         <div>
@@ -234,7 +263,7 @@ const submitListing = () => {
                                 </div>
                                 <input type="number" v-model="form.price_monthly" step="0.01" min="0"
                                     class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]"
-                                    placeholder="100.00" />
+                                    placeholder="90" />
                             </div>
                         </div>
                     </div>
@@ -402,7 +431,7 @@ const submitListing = () => {
                     </div>
                     <!-- Display overall photos error -->
                     <div v-if="form.errors.photos" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.photos
-                        }}</div>
+                    }}</div>
                     <!-- Display specific photo errors -->
                     <template v-for="(error, key) in form.errors" :key="key">
                         <div v-if="key.startsWith('photos.')" class="mt-1 text-sm text-red-600 font-medium">{{ error }}
@@ -424,33 +453,51 @@ const submitListing = () => {
             </form>
         </main>
 
-        <!-- Success Snackbar -->
-        <transition enter-active-class="transform ease-out duration-300 transition"
-            enter-from-class="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
-            enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
-            leave-active-class="transition ease-in duration-100" leave-from-class="opacity-100"
-            leave-to-class="opacity-0">
-            <div v-if="successSnack"
-                class="fixed bottom-0 left-0 right-0 p-4 sm:p-6 pb-8 pointer-events-none flex justify-center z-50">
-                <div
-                    class="max-w-md w-full bg-green-50 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden">
-                    <div class="p-4">
-                        <div class="flex items-start">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <div class="ml-3 w-0 flex-1 pt-0.5">
-                                <p class="text-sm font-medium text-green-800">Successfully submitted</p>
-                                <p class="mt-1 text-sm text-green-700">Listing submitted successfully! Our team will
-                                    review it.</p>
-                            </div>
+        <!-- Success Confirmation Modal -->
+        <transition
+            enter-active-class="ease-out duration-300 transition"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="ease-in duration-200 transition"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div v-if="showSuccessModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+                <transition
+                    enter-active-class="ease-out duration-300 transition transform"
+                    enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    enter-to-class="opacity-100 translate-y-0 sm:scale-100"
+                    leave-active-class="ease-in duration-200 transition transform"
+                    leave-from-class="opacity-100 translate-y-0 sm:scale-100"
+                    leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                >
+                    <div class="bg-white rounded-[24px] max-w-md w-full p-8 shadow-2xl border border-gray-100 text-center relative">
+                        <!-- Success Check Icon -->
+                        <div class="bg-blue-50 text-[#1866ed] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
                         </div>
+                        
+                        <!-- Header / Notification -->
+                        <h3 class="text-[22px] font-extrabold text-gray-900 mb-3 tracking-tight">
+                            Host lists their SPOT
+                        </h3>
+                        
+                        <!-- Details Body -->
+                        <p class="text-[15px] text-gray-600 leading-relaxed mb-8 px-2 font-medium">
+                            Solo Park deducts 15% from your listed rate. Payouts are released after 10 days and processed the first week of each month.
+                        </p>
+                        
+                        <!-- CTA button -->
+                        <button 
+                            @click="goToMyListings"
+                            class="w-full bg-[#1866ed] hover:bg-blue-700 text-white font-extrabold py-4 px-6 rounded-[12px] shadow-lg shadow-blue-100 hover:shadow-blue-200 transition-all duration-150 text-[16px]"
+                        >
+                            Got It
+                        </button>
                     </div>
-                </div>
+                </transition>
             </div>
         </transition>
     </div>

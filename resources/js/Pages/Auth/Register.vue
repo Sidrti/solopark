@@ -4,6 +4,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import Checkbox from '@/Components/Checkbox.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const form = useForm({
@@ -11,6 +12,7 @@ const form = useForm({
     email: '',
     password: '',
     password_confirmation: '',
+    terms: false,
 });
 
 const submit = () => {
@@ -60,6 +62,16 @@ const submit = () => {
                     v-model="form.password_confirmation" required autocomplete="new-password" />
 
                 <InputError class="mt-2" :message="form.errors.password_confirmation" />
+            </div>
+
+            <div class="mt-4">
+                <label class="flex items-center">
+                    <Checkbox name="terms" v-model:checked="form.terms" required />
+                    <span class="ms-2 text-sm text-gray-600 font-medium">
+                        I agree to the <Link :href="route('terms')" class="underline hover:text-[#1866ed] transition-colors" target="_blank">Terms of Service</Link>
+                    </span>
+                </label>
+                <InputError class="mt-2" :message="form.errors.terms" />
             </div>
 
             <div class="mt-4 flex items-center justify-end">

@@ -33,6 +33,7 @@ const form = useForm({
     },
     photos: [],
     removePhotos: [],
+    contact_number: props.spot.contact_number || '',
 });
 
 watch(() => form.is24_7, (is247) => {
@@ -47,6 +48,16 @@ const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const newPoint = ref('');
 const successSnack = ref(false);
 const addressInput = ref(null);
+
+const formatMobile = () => {
+    const cleaned = form.contact_number.replace(/\D/g, '').substring(0, 10);
+    const match = cleaned.match(/(\d{0,3})(\d{0,3})(\d{0,4})/);
+    if (!match) {
+        form.contact_number = '';
+    } else {
+        form.contact_number = !match[2] ? match[1] : '(' + match[1] + ') ' + match[2] + (match[3] ? '-' + match[3] : '');
+    }
+};
 
 onMounted(() => {
     const initAutocomplete = () => {
@@ -167,6 +178,21 @@ const updateListing = () => {
                     <div class="mb-6">
                         <label class="block text-[14px] font-bold text-gray-900 mb-2">Spot Address</label>
                         <input type="text" ref="addressInput" v-model="form.address" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]" required />
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-[14px] font-bold text-gray-900 mb-2">Host Phone Number</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-[15px]">+1</span>
+                                <div class="h-5 w-px bg-gray-300 mx-2"></div>
+                            </div>
+                            <input type="tel" v-model="form.contact_number" @input="formatMobile" :class="[
+                                'pl-[52px] block w-full rounded-lg shadow-sm sm:text-[15px] h-[52px] placeholder-gray-400',
+                                form.errors.contact_number ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-[#1866ed] focus:ring-[#1866ed]'
+                            ]" placeholder="(555) 000-0000" required />
+                        </div>
+                        <p v-if="form.errors.contact_number" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.contact_number }}</p>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-2">

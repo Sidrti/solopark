@@ -93,7 +93,19 @@ const submit = () => {
                         </button>
                     </form>
 
-                    <div class="mt-12 pt-10 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-8">
+                    <div class="mt-12 pt-10 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                        <div class="text-center">
+                            <div
+                                class="bg-gray-50 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 text-[#1866ed]">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h3 class="font-bold text-gray-900 text-sm mb-1">Call Us</h3>
+                            <p class="text-gray-500 text-xs">(647) 495-0720</p>
+                        </div>
                         <div class="text-center">
                             <div
                                 class="bg-gray-50 w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 text-[#1866ed]">
@@ -118,7 +130,7 @@ const submit = () => {
                                 </svg>
                             </div>
                             <h3 class="font-bold text-gray-900 text-sm mb-1">Office</h3>
-                            <p class="text-gray-500 text-xs"> Mississauga, Ontario</p>
+                            <p class="text-gray-500 text-xs px-2 leading-relaxed">200 Matheson Blvd W, Mississauga ON L5R 3L7</p>
                         </div>
                         <div class="text-center">
                             <div

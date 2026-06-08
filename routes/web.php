@@ -23,6 +23,13 @@ Route::get('/contact-us', function () {
     ]);
 })->name('contact-us');
 
+Route::get('/terms-of-service', function () {
+    return Inertia::render('TermsOfService', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+    ]);
+})->name('terms');
+
 Route::get('/list-spot', function () {
     return Inertia::render('ListParkingSpot', [
         'canLogin' => Route::has('login'),
