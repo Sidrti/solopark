@@ -18,6 +18,10 @@ class BookingsTable
                     ->formatStateUsing(fn ($state) => $state)
                     ->sortable(),
                 TextColumn::make('user.name')->searchable()->sortable(),
+                TextColumn::make('mobile_number')
+                    ->label('Phone Number')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('spot.title')->searchable()->sortable(),
                 TextColumn::make('total_price')
                     ->formatStateUsing(fn ($state) => 'CA$ ' . number_format($state, 0))

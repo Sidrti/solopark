@@ -168,6 +168,10 @@ const handleSearch = () => {
         params.start = startTime.value;
         params.end = endTime.value;
     } else if (activeTab.value === 'recurring') {
+        if (recurringDays.value.length < 2) {
+            alert('Please select at least 2 days for a daily booking.');
+            return;
+        }
         params.startDate = startDate.value;
         params.endDate = endDate.value;
         params.startTime = recurringStartTime.value;

@@ -262,8 +262,17 @@ const formatDateTimeShort = (dateStr) => {
                     <!-- Parking Cards -->
                     <div v-if="parkingSpots.length > 0">
                         <div v-for="(spot, i) in parkingSpots" :key="i"
-                            class="bg-white rounded-[12px] mb-4 border border-gray-200 hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-[2px] transition-all duration-200 relative overflow-hidden group cursor-pointer">
-                            <div v-if="spot.badge"
+                            :class="[
+                                'bg-white rounded-[12px] mb-4 border border-gray-200 transition-all duration-200 relative overflow-hidden group',
+                                spot.is_active 
+                                    ? 'hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-[2px] cursor-pointer' 
+                                    : 'cursor-not-allowed opacity-60 bg-gray-50'
+                            ]">
+                            <div v-if="!spot.is_active"
+                                class="absolute top-0 left-0 bg-red-600 text-white text-[11px] font-bold px-3 py-1 rounded-tl-[12px] rounded-br-[12px] z-10">
+                                Unavailable
+                            </div>
+                            <div v-else-if="spot.badge"
                                 class="absolute top-0 left-0 bg-[#1a1a1a] text-white text-[11px] font-bold px-3 py-1 rounded-tl-[12px] rounded-br-[12px] z-10">
                                 {{ spot.badge }}
                             </div>
@@ -278,7 +287,7 @@ const formatDateTimeShort = (dateStr) => {
                                         <div class="pr-2">
                                             <div
                                                 class="text-[14px] font-bold text-gray-900 leading-tight line-clamp-2 max-w-[160px]">
-                                                {{ spot.address }}</div>
+                                                {{ spot.title }}</div>
 
                                             <div class="text-[12px] text-gray-500 mt-1 flex items-center">
                                                 <svg class="w-[14px] h-[14px] mr-1" fill="none" stroke="currentColor"
@@ -295,9 +304,13 @@ const formatDateTimeShort = (dateStr) => {
                                             <div class="text-[12px] text-[#1866ed] font-medium underline mt-0.5">Total</div>
                                         </div>
                                     </div>
-                                    <div class="flex justify-end mt-2 items-center">
+                                    <div class="flex justify-end mt-2 items-center" v-if="spot.is_active">
                                         <Link :href="route('spot-details', { id: spot.id, type: props.type, start: props.start, end: props.end, startDate: props.startDate, endDate: props.endDate, startTime: props.startTime, endTime: props.endTime, days: props.days, lat: props.lat, lng: props.lng })" class="text-[14px] font-bold text-[#1866ed] mr-5 hover:text-blue-800 transition-colors">Details</Link>
                                         <Link :href="route('spot-book', { id: spot.id, type: props.type, start: props.start, end: props.end, startDate: props.startDate, endDate: props.endDate, startTime: props.startTime, endTime: props.endTime, days: props.days, lat: props.lat, lng: props.lng })" class="bg-[#1866ed] hover:bg-blue-700 text-white text-[14px] font-bold py-2 px-6 rounded-[8px] transition-colors">Book Now</Link>
+                                    </div>
+                                    <div class="flex justify-end mt-2 items-center" v-else>
+                                        <span class="text-[14px] font-bold text-gray-400 mr-5 cursor-not-allowed">Details</span>
+                                        <span class="bg-gray-300 text-gray-500 text-[14px] font-bold py-2 px-6 rounded-[8px] cursor-not-allowed">Book Now</span>
                                     </div>
                                 </div>
                             </div>
@@ -348,10 +361,10 @@ const formatDateTimeShort = (dateStr) => {
                         <Circle v-for="(spot, i) in parkingSpots" :key="'circle' + i" :options="{
                             center: { lat: parseFloat(spot.lat), lng: parseFloat(spot.lng) },
                             radius: 500,
-                            strokeColor: spot.dummy ? '#6b7280' : '#1866ed',
+                            strokeColor: (!spot.is_active || spot.dummy) ? '#6b7280' : '#1866ed',
                             strokeOpacity: 0.35,
                             strokeWeight: 1,
-                            fillColor: spot.dummy ? '#6b7280' : '#1866ed',
+                            fillColor: (!spot.is_active || spot.dummy) ? '#6b7280' : '#1866ed',
                             fillOpacity: 0.12
                         }" />
 
@@ -361,7 +374,7 @@ const formatDateTimeShort = (dateStr) => {
                             <div
                                 :class="[
                                     'rounded-[20px] px-2.5 py-1 font-bold text-[13px] shadow-[0_2px_6px_rgba(0,0,0,0.2)] transition-all duration-200 transform',
-                                    spot.dummy 
+                                    (!spot.is_active || spot.dummy) 
                                         ? 'bg-gray-200 border border-gray-400 text-gray-500 cursor-not-allowed line-through' 
                                         : 'bg-white border border-gray-300 text-gray-900 cursor-pointer hover:bg-[#1866ed] hover:text-white hover:z-50 hover:border-[#1866ed] hover:scale-110'
                                 ]">

@@ -98,7 +98,10 @@ const baseCost = computed(() => {
         const months = Math.ceil(diffDays / 30);
         return (props.spot.price_monthly || props.spot.price) * months;
     }
-    return (props.spot.price_hourly / 2) * durationUnits.value;
+    const rate = props.type === 'recurring' 
+        ? (props.spot.price_daily || props.spot.price_hourly) 
+        : props.spot.price_hourly;
+    return (rate / 2) * durationUnits.value;
 });
 
 const serviceFeeAmount = computed(() => {

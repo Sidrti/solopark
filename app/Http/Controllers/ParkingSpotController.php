@@ -44,6 +44,7 @@ class ParkingSpotController extends Controller
                     'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
                     'price_hourly' => $spot->price_hourly,
                     'price_monthly' => $spot->price_monthly,
+                    'price_daily' => $spot->price_daily,
                     'is_active' => $spot->is_active,
                     'bookings' => $bookings,
                     'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=400',
@@ -66,7 +67,7 @@ class ParkingSpotController extends Controller
         $end = $request->input('end');
         $locationStr = $request->input('location');
 
-        $query = ParkingSpot::query()->where('is_active', true)->with('photos');
+        $query = ParkingSpot::query()->with('photos');
 
         $latitude = $lat ?: 43.6532; // Default to Toronto
         $longitude = $lng ?: -79.3832;
@@ -235,7 +236,7 @@ class ParkingSpotController extends Controller
                 }
                 if ($durationUnits == 0)
                     $durationUnits = 2;
-                $baseCost = ($spot->price_hourly / 2) * $durationUnits;
+                $baseCost = (($spot->price_daily ?? $spot->price_hourly) / 2) * $durationUnits;
             }
 
             $serviceRate = ($searchType === 'monthly') ? 0.30 : 0.10;
@@ -257,6 +258,7 @@ class ParkingSpotController extends Controller
 
             return [
                 'id' => $spot->id,
+                'title' => $spot->title,
                 'address' => $displayAddress,
                 'rating' => 4.5,
                 'reviews' => 10,
@@ -267,7 +269,10 @@ class ParkingSpotController extends Controller
                 'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=400',
                 'lat' => $approxLat,
                 'lng' => $approxLng,
-                'dummy' => (bool)$spot->dummy,
+                'dummy' => (bool) $spot->dummy,
+                'is_active' => (bool) $spot->is_active,
+                'price_daily' => $spot->price_daily,
+                'price_hourly' => $spot->price_hourly,
             ];
         });
 
@@ -297,6 +302,7 @@ class ParkingSpotController extends Controller
             'type' => 'required|string|in:Driveway,Garage,Uncovered Lot,Covered Lot,Backyard',
             'price' => 'required|numeric|min:0',
             'price_monthly' => 'nullable|numeric|min:0',
+            'price_daily' => 'nullable|numeric|min:0',
             'is24_7' => 'boolean',
             'features' => 'array',
             'additionalPoints' => 'array',
@@ -327,6 +333,7 @@ class ParkingSpotController extends Controller
             'parking_type' => $validated['type'],
             'price_hourly' => $validated['price'],
             'price_monthly' => $validated['price_monthly'] ?? null,
+            'price_daily' => $validated['price_daily'] ?? null,
             'is_24_7' => $validated['is24_7'] ?? false,
             'features' => $validated['features'] ?? [],
             'additional_points' => $validated['additionalPoints'] ?? [],
@@ -388,9 +395,14 @@ class ParkingSpotController extends Controller
             'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
             'rating' => 4.8,
             'reviews' => 6.5,
-            'price' => $request->input('type') === 'monthly' ? $spot->price_monthly : $spot->price_hourly,
+            'price' => $request->input('type') === 'monthly'
+                ? $spot->price_monthly
+                : ($request->input('type') === 'recurring'
+                    ? ($spot->price_daily ?? $spot->price_hourly)
+                    : $spot->price_hourly),
             'price_hourly' => $spot->price_hourly,
             'price_monthly' => $spot->price_monthly,
+            'price_daily' => $spot->price_daily,
             'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=1200',
             'availDays' => !empty($availDays) ? $availDays : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
             'availHours' => $spot->is_24_7 ? '24/7' : $availHours,
@@ -436,9 +448,14 @@ class ParkingSpotController extends Controller
         $formattedSpot = [
             'id' => $spot->id,
             'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
-            'price' => $type === 'monthly' ? $spot->price_monthly : $spot->price_hourly,
+            'price' => $type === 'monthly'
+                ? $spot->price_monthly
+                : ($type === 'recurring'
+                    ? ($spot->price_daily ?? $spot->price_hourly)
+                    : $spot->price_hourly),
             'price_hourly' => $spot->price_hourly,
             'price_monthly' => $spot->price_monthly,
+            'price_daily' => $spot->price_daily,
             'city' => $spot->city,
             'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=1200',
         ];
@@ -524,6 +541,7 @@ class ParkingSpotController extends Controller
             'type' => 'required|string|in:Driveway,Garage,Uncovered Lot,Covered Lot,Backyard',
             'price' => 'required|numeric|min:0',
             'price_monthly' => 'nullable|numeric|min:0',
+            'price_daily' => 'nullable|numeric|min:0',
             'is24_7' => 'boolean',
             'features' => 'array',
             'additionalPoints' => 'array',
@@ -555,6 +573,7 @@ class ParkingSpotController extends Controller
             'parking_type' => $validated['type'],
             'price_hourly' => $validated['price'],
             'price_monthly' => $validated['price_monthly'] ?? null,
+            'price_daily' => $validated['price_daily'] ?? null,
             'is_24_7' => $validated['is24_7'] ?? false,
             'features' => $validated['features'] ?? [],
             'additional_points' => $validated['additionalPoints'] ?? [],
