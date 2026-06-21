@@ -21,6 +21,7 @@ const form = useForm({
     type: props.spot.parking_type || null,
     price: props.spot.price_hourly || '',
     price_monthly: props.spot.price_monthly || '',
+    price_daily: props.spot.price_daily || '',
     selectedDays: props.spot.selectedDays || [],
     availFrom: props.spot.availFrom || '',
     availTo: props.spot.availTo || '',
@@ -195,7 +196,7 @@ const updateListing = () => {
                         <p v-if="form.errors.contact_number" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.contact_number }}</p>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-2">
                         <div>
                             <label class="block text-[14px] font-bold text-gray-900 mb-2">Parking Type</label>
                             <select v-model="form.type" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]" required>
@@ -209,6 +210,10 @@ const updateListing = () => {
                         <div>
                             <label class="block text-[14px] font-bold text-gray-900 mb-2">Price hourly (CA$)</label>
                             <input type="number" v-model="form.price" step="0.01" min="0" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]" required />
+                        </div>
+                        <div>
+                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price daily/hr (CA$)</label>
+                            <input type="number" v-model="form.price_daily" step="0.01" min="0" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]" />
                         </div>
                         <div>
                             <label class="block text-[14px] font-bold text-gray-900 mb-2">Price monthly (CA$)</label>

@@ -136,7 +136,7 @@ const pastBookings = computed(() => {
                                 'inline-flex items-center backdrop-blur-md text-white text-[12px] font-bold px-3 py-1 rounded-full uppercase tracking-widest leading-none',
                                 spot.is_active ? 'bg-green-500/50' : 'bg-red-500/50'
                             ]">
-                                {{ spot.is_active ? 'Active' : 'Disabled' }}
+                                {{ spot.is_active ? 'Listing Active' : 'Listing Paused' }}
                             </span>
                         </div>
                         <div class="absolute top-4 right-4 flex flex-col items-end gap-2">
@@ -213,7 +213,7 @@ const pastBookings = computed(() => {
                         <div class="flex items-center gap-3 pr-4 border-r border-gray-100">
                             <span class="text-sm font-bold"
                                 :class="selectedSpot.is_active ? 'text-green-600' : 'text-gray-400'">
-                                {{ selectedSpot.is_active ? 'Active' : 'Disabled' }}
+                                {{ selectedSpot.is_active ? 'Listing Active' : 'Listing Paused' }}
                             </span>
                             <button @click.stop="toggleStatus(selectedSpot.id)"
                                 class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none"

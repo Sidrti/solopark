@@ -23,6 +23,7 @@ const form = useForm({
     type: null,
     price: '',
     price_monthly: '',
+    price_daily: '',
     selectedDays: [],
     availFrom: '',
     availTo: '',
@@ -230,7 +231,7 @@ const submitListing = () => {
                         <p v-if="form.errors.contact_number" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.contact_number }}</p>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-2">
                         <div>
                             <label class="block text-[14px] font-bold text-gray-900 mb-2">Parking Type</label>
                             <select v-model="form.type"
@@ -253,6 +254,17 @@ const submitListing = () => {
                                 <input type="number" v-model="form.price" step="0.01" min="0"
                                     class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]"
                                     placeholder="4" required />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price daily/hr (CA$)</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-[15px]">$</span>
+                                </div>
+                                <input type="number" v-model="form.price_daily" step="0.01" min="0"
+                                    class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]"
+                                    placeholder="3" />
                             </div>
                         </div>
                         <div>

@@ -23,10 +23,12 @@ class ParkingSpot extends Model
         'parking_type',
         'price_hourly',
         'price_monthly',
+        'price_daily',
         'is_24_7',
         'features',
         'additional_points',
         'is_active',
+        'contact_number'
     ];
 
     protected $casts = [
@@ -35,6 +37,7 @@ class ParkingSpot extends Model
         'additional_points' => 'array',
         'price_hourly' => 'decimal:2',
         'price_monthly' => 'decimal:2',
+        'price_daily' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
