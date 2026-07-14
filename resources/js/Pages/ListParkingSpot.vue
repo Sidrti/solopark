@@ -21,6 +21,9 @@ const form = useForm({
     latitude: null,
     longitude: null,
     type: null,
+    offer_hourly: true,
+    offer_daily: false,
+    offer_monthly: false,
     price: '',
     price_monthly: '',
     price_daily: '',
@@ -151,6 +154,10 @@ const handleFileUpload = (event) => {
 };
 
 const submitListing = () => {
+    if (!form.offer_hourly) form.price = null;
+    if (!form.offer_daily) form.price_daily = null;
+    if (!form.offer_monthly) form.price_monthly = null;
+
     form.post('/list-spot', {
         forceFormData: true,
         preserveScroll: true,
@@ -231,6 +238,8 @@ const submitListing = () => {
                         <p v-if="form.errors.contact_number" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.contact_number }}</p>
                     </div>
 
+                    <p v-if="form.errors.price" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.price }}</p>
+
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-2">
                         <div>
                             <label class="block text-[14px] font-bold text-gray-900 mb-2">Parking Type</label>
@@ -246,36 +255,57 @@ const submitListing = () => {
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price hourly (CA$)</label>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-[14px] font-bold text-gray-900">Price hourly (CA$)</label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" v-model="form.offer_hourly" class="sr-only peer" />
+                                    <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1866ed]"></div>
+                                    <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
+                                </label>
+                            </div>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-[15px]">$</span>
                                 </div>
-                                <input type="number" v-model="form.price" step="0.01" min="0"
-                                    class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]"
-                                    placeholder="4" required />
+                                <input type="number" v-model="form.price" step="0.01" min="4" :disabled="!form.offer_hourly"
+                                    class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400"
+                                    placeholder="4" :required="form.offer_hourly" />
                             </div>
                         </div>
                         <div>
-                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price daily/hr (CA$)</label>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-[14px] font-bold text-gray-900">Price daily/hr (CA$)</label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" v-model="form.offer_daily" class="sr-only peer" />
+                                    <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1866ed]"></div>
+                                    <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
+                                </label>
+                            </div>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-[15px]">$</span>
                                 </div>
-                                <input type="number" v-model="form.price_daily" step="0.01" min="0"
-                                    class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]"
-                                    placeholder="3" />
+                                <input type="number" v-model="form.price_daily" step="0.01" min="1" :disabled="!form.offer_daily"
+                                    class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400"
+                                    placeholder="3" :required="form.offer_daily" />
                             </div>
                         </div>
                         <div>
-                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price monthly (CA$)</label>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-[14px] font-bold text-gray-900">Price monthly (CA$)</label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" v-model="form.offer_monthly" class="sr-only peer" />
+                                    <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1866ed]"></div>
+                                    <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
+                                </label>
+                            </div>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-[15px]">$</span>
                                 </div>
-                                <input type="number" v-model="form.price_monthly" step="0.01" min="0"
-                                    class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]"
-                                    placeholder="90" />
+                                <input type="number" v-model="form.price_monthly" step="0.01" min="0" :disabled="!form.offer_monthly"
+                                    class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400"
+                                    placeholder="90" :required="form.offer_monthly" />
                             </div>
                         </div>
                     </div>

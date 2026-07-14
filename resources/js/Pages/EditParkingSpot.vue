@@ -19,6 +19,9 @@ const form = useForm({
     latitude: props.spot.latitude || null,
     longitude: props.spot.longitude || null,
     type: props.spot.parking_type || null,
+    offer_hourly: props.spot.price_hourly !== null,
+    offer_daily: props.spot.price_daily !== null,
+    offer_monthly: props.spot.price_monthly !== null,
     price: props.spot.price_hourly || '',
     price_monthly: props.spot.price_monthly || '',
     price_daily: props.spot.price_daily || '',
@@ -134,6 +137,10 @@ const removeExistingPhoto = (id) => {
 };
 
 const updateListing = () => {
+    if (!form.offer_hourly) form.price = null;
+    if (!form.offer_daily) form.price_daily = null;
+    if (!form.offer_monthly) form.price_monthly = null;
+
     // Laravel bug with PATCH and multipart form data, using POST with _method=PATCH or just POST for update
     form.post(route('spots.update', props.spot.id), {
         forceFormData: true,
@@ -196,6 +203,8 @@ const updateListing = () => {
                         <p v-if="form.errors.contact_number" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.contact_number }}</p>
                     </div>
 
+                    <p v-if="form.errors.price" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.price }}</p>
+
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-2">
                         <div>
                             <label class="block text-[14px] font-bold text-gray-900 mb-2">Parking Type</label>
@@ -208,16 +217,37 @@ const updateListing = () => {
                             </select>
                         </div>
                         <div>
-                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price hourly (CA$)</label>
-                            <input type="number" v-model="form.price" step="0.01" min="0" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]" required />
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-[14px] font-bold text-gray-900">Price hourly (CA$)</label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" v-model="form.offer_hourly" class="sr-only peer" />
+                                    <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1866ed]"></div>
+                                    <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
+                                </label>
+                            </div>
+                            <input type="number" v-model="form.price" step="0.01" min="4" :disabled="!form.offer_hourly" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" :required="form.offer_hourly" />
                         </div>
                         <div>
-                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price daily/hr (CA$)</label>
-                            <input type="number" v-model="form.price_daily" step="0.01" min="0" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]" />
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-[14px] font-bold text-gray-900">Price daily/hr (CA$)</label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" v-model="form.offer_daily" class="sr-only peer" />
+                                    <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1866ed]"></div>
+                                    <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
+                                </label>
+                            </div>
+                            <input type="number" v-model="form.price_daily" step="0.01" min="1" :disabled="!form.offer_daily" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" :required="form.offer_daily" />
                         </div>
                         <div>
-                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Price monthly (CA$)</label>
-                            <input type="number" v-model="form.price_monthly" step="0.01" min="0" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]" />
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-[14px] font-bold text-gray-900">Price monthly (CA$)</label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" v-model="form.offer_monthly" class="sr-only peer" />
+                                    <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1866ed]"></div>
+                                    <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
+                                </label>
+                            </div>
+                            <input type="number" v-model="form.price_monthly" step="0.01" min="0" :disabled="!form.offer_monthly" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" :required="form.offer_monthly" />
                         </div>
                     </div>
                 </div>
