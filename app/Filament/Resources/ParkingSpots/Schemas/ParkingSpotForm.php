@@ -38,12 +38,13 @@ class ParkingSpotForm
                 TextInput::make('price_hourly')
                     ->numeric()
                     ->prefix('CA$')
-                    ->required()
+                    ->minValue(4)
                     ->label('Hourly Price'),
 
                 TextInput::make('price_daily')
                     ->numeric()
                     ->prefix('CA$')
+                    ->minValue(1)
                     ->label('Daily Price (per hour)'),
 
                 TextInput::make('price_monthly')

@@ -165,6 +165,13 @@ const handleSearch = () => {
     };
 
     if (activeTab.value === 'one-time') {
+        const startDt = new Date(startTime.value);
+        const endDt = new Date(endTime.value);
+        const diffMins = (endDt - startDt) / (1000 * 60);
+        if (diffMins < 60) {
+            alert('Please select a time range of at least 1 hour.');
+            return;
+        }
         params.start = startTime.value;
         params.end = endTime.value;
     } else if (activeTab.value === 'recurring') {
@@ -172,6 +179,16 @@ const handleSearch = () => {
             alert('Please select at least 2 days for a daily booking.');
             return;
         }
+
+        const [sHour, sMin] = recurringStartTime.value.split(':').map(Number);
+        const [eHour, eMin] = recurringEndTime.value.split(':').map(Number);
+        const diffMins = (eHour * 60 + eMin) - (sHour * 60 + sMin);
+        
+        if (diffMins < 300) {
+            alert('Daily parking requires a minimum of 5 hours per selected day.');
+            return;
+        }
+
         params.startDate = startDate.value;
         params.endDate = endDate.value;
         params.startTime = recurringStartTime.value;
@@ -310,15 +327,19 @@ const handleSearch = () => {
                                 </div>
                             </div>
 
-                            <div class="flex flex-wrap gap-2">
-                                <button v-for="day in days" :key="day" type="button" @click="toggleDay(day)" :class="[
-                                    'px-3 py-1.5 rounded-full text-xs font-bold transition-all border',
-                                    recurringDays.includes(day)
-                                        ? 'bg-[#1866ed] text-white border-[#1866ed]'
-                                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
-                                ]">
-                                    {{ day }}
-                                </button>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Select Days of the Week</label>
+                                <p class="text-[11px] text-gray-500 mb-2 leading-tight">Choose which days you need parking during your selected date range.</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button v-for="day in days" :key="day" type="button" @click="toggleDay(day)" :class="[
+                                        'px-3 py-1.5 rounded-full text-xs font-bold transition-all border',
+                                        recurringDays.includes(day)
+                                            ? 'bg-[#1866ed] text-white border-[#1866ed]'
+                                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                                    ]">
+                                        {{ day }}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

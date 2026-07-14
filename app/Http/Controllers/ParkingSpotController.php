@@ -83,8 +83,10 @@ class ParkingSpotController extends Controller
         $timezone = $request->input('timezone', config('app.timezone'));
         $searchType = $request->input('type', 'one-time');
 
-        if ($searchType === 'one-time' && $start && $end) {
-            try {
+        if ($searchType === 'one-time') {
+            $query->whereNotNull('price_hourly');
+            if ($start && $end) {
+                try {
                 $startDt = \Carbon\Carbon::parse($start, $timezone);
                 $endDt = \Carbon\Carbon::parse($end, $timezone);
 
@@ -109,8 +111,11 @@ class ParkingSpotController extends Controller
                 });
             } catch (\Exception $e) {
                 // Ignore parsing errors
+                }
             }
         } elseif ($searchType === 'recurring') {
+            $query->whereNotNull('price_daily');
+            
             $startDate = $request->input('startDate');
             $endDate = $request->input('endDate');
             $startTime = $request->input('startTime');
@@ -300,9 +305,9 @@ class ParkingSpotController extends Controller
             'title' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'type' => 'required|string|in:Driveway,Garage,Uncovered Lot,Covered Lot,Backyard',
-            'price' => 'required|numeric|min:0',
+            'price' => 'nullable|numeric|min:4',
             'price_monthly' => 'nullable|numeric|min:0',
-            'price_daily' => 'nullable|numeric|min:0',
+            'price_daily' => 'nullable|numeric|min:1',
             'is24_7' => 'boolean',
             'features' => 'array',
             'additionalPoints' => 'array',
@@ -321,6 +326,10 @@ class ParkingSpotController extends Controller
             'contact_number.regex' => 'The contact number must be a valid 10-digit Canadian phone number in the format (555) 555-5555.',
         ]);
 
+        if (is_null($request->price) && is_null($request->price_daily) && is_null($request->price_monthly)) {
+            return back()->withErrors(['price' => 'At least one pricing option (Hourly, Daily, or Monthly) must be enabled.'])->withInput();
+        }
+
         $spot = ParkingSpot::create([
             'user_id' => Auth::id(),
             'title' => $validated['title'],
@@ -331,7 +340,7 @@ class ParkingSpotController extends Controller
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
             'parking_type' => $validated['type'],
-            'price_hourly' => $validated['price'],
+            'price_hourly' => $validated['price'] ?? null,
             'price_monthly' => $validated['price_monthly'] ?? null,
             'price_daily' => $validated['price_daily'] ?? null,
             'is_24_7' => $validated['is24_7'] ?? false,
@@ -404,6 +413,7 @@ class ParkingSpotController extends Controller
             'price_monthly' => $spot->price_monthly,
             'price_daily' => $spot->price_daily,
             'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=1200',
+            'photos' => $photos->map(fn($p) => asset('storage/' . $p->image_path))->toArray(),
             'availDays' => !empty($availDays) ? $availDays : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
             'availHours' => $spot->is_24_7 ? '24/7' : $availHours,
             'features' => $spot->features ?? [],
@@ -539,9 +549,9 @@ class ParkingSpotController extends Controller
             'title' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'type' => 'required|string|in:Driveway,Garage,Uncovered Lot,Covered Lot,Backyard',
-            'price' => 'required|numeric|min:0',
+            'price' => 'nullable|numeric|min:4',
             'price_monthly' => 'nullable|numeric|min:0',
-            'price_daily' => 'nullable|numeric|min:0',
+            'price_daily' => 'nullable|numeric|min:1',
             'is24_7' => 'boolean',
             'features' => 'array',
             'additionalPoints' => 'array',
@@ -562,6 +572,10 @@ class ParkingSpotController extends Controller
             'contact_number.regex' => 'The contact number must be a valid 10-digit Canadian phone number in the format (555) 555-5555.',
         ]);
 
+        if (is_null($request->price) && is_null($request->price_daily) && is_null($request->price_monthly)) {
+            return back()->withErrors(['price' => 'At least one pricing option (Hourly, Daily, or Monthly) must be enabled.'])->withInput();
+        }
+
         $spot->update([
             'title' => $validated['title'],
             'address' => $validated['address'],
@@ -571,7 +585,7 @@ class ParkingSpotController extends Controller
             'latitude' => $validated['latitude'] ?? $spot->latitude,
             'longitude' => $validated['longitude'] ?? $spot->longitude,
             'parking_type' => $validated['type'],
-            'price_hourly' => $validated['price'],
+            'price_hourly' => $validated['price'] ?? null,
             'price_monthly' => $validated['price_monthly'] ?? null,
             'price_daily' => $validated['price_daily'] ?? null,
             'is_24_7' => $validated['is24_7'] ?? false,

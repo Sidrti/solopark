@@ -139,6 +139,14 @@ const handleUpdateSearch = () => {
     };
 
     if (searchType.value === 'one-time') {
+        const startDt = new Date(startTimeOneTime.value);
+        const endDt = new Date(endTimeOneTime.value);
+        const diffMins = (endDt - startDt) / (1000 * 60);
+        if (diffMins < 60) {
+            alert('Please select a time range of at least 1 hour.');
+            return;
+        }
+
         params.start = startTimeOneTime.value;
         params.end = endTimeOneTime.value;
     } else {

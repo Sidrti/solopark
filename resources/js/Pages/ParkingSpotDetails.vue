@@ -131,7 +131,12 @@ const formatDateTimeShort = (date) => {
                 <!-- Left Details Content -->
                 <div class="lg:col-span-2 space-y-8">
 
-                    <div class="rounded-2xl overflow-hidden h-[300px] sm:h-[400px]">
+                    <div v-if="spot.photos && spot.photos.length > 1" class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+                        <div v-for="(photo, idx) in spot.photos" :key="idx" class="w-[85%] sm:w-[70%] shrink-0 h-[300px] sm:h-[400px] snap-center rounded-2xl overflow-hidden shadow-sm">
+                            <img :src="photo" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105 cursor-pointer" :alt="spot.address + ' photo ' + (idx + 1)">
+                        </div>
+                    </div>
+                    <div v-else class="rounded-2xl overflow-hidden h-[300px] sm:h-[400px]">
                         <img :src="spot.image" class="w-full h-full object-cover" :alt="spot.address">
                     </div>
 
