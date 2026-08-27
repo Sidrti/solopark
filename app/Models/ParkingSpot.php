@@ -28,7 +28,8 @@ class ParkingSpot extends Model
         'features',
         'additional_points',
         'is_active',
-        'contact_number'
+        'contact_number',
+        'dummy',
     ];
 
     protected $casts = [
@@ -39,6 +40,7 @@ class ParkingSpot extends Model
         'price_monthly' => 'decimal:2',
         'price_daily' => 'decimal:2',
         'is_active' => 'boolean',
+        'dummy' => 'boolean',
     ];
 
     public function user(): BelongsTo
