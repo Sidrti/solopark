@@ -12,6 +12,7 @@ class Booking extends Model
         'user_id',
         'parking_spot_id',
         'vehicle_id',
+        'spaces_count',
         'start_time',
         'end_time',
         'mobile_number',
@@ -24,9 +25,11 @@ class Booking extends Model
         'timezone',
         'is_recurring',
         'recurring_group_id',
+        'payment_intent_id',
     ];
     
     protected $casts = [
+        'spaces_count' => 'integer',
         'start_time' => 'datetime',
         'end_time' => 'datetime',
     ];

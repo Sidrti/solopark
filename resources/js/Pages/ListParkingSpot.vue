@@ -21,6 +21,7 @@ const form = useForm({
     latitude: null,
     longitude: null,
     type: null,
+    total_spaces: 1,
     offer_hourly: true,
     offer_daily: false,
     offer_monthly: false,
@@ -119,7 +120,12 @@ onMounted(() => {
         document.head.appendChild(script);
     } else {
         // Wait for it to load
-        setTimeout(initAutocomplete, 1000);
+        const checkGoogleMaps = setInterval(() => {
+            if (window.google && window.google.maps && window.google.maps.places) {
+                clearInterval(checkGoogleMaps);
+                initAutocomplete();
+            }
+        }, 100);
     }
 });
 
@@ -238,9 +244,7 @@ const submitListing = () => {
                         <p v-if="form.errors.contact_number" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.contact_number }}</p>
                     </div>
 
-                    <p v-if="form.errors.price" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.price }}</p>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
                         <div>
                             <label class="block text-[14px] font-bold text-gray-900 mb-2">Parking Type</label>
                             <select v-model="form.type"
@@ -254,6 +258,19 @@ const submitListing = () => {
                                 <option>Backyard</option>
                             </select>
                         </div>
+                        <div>
+                            <label class="block text-[14px] font-bold text-gray-900 mb-2">Total Spaces Available</label>
+                            <input type="number" v-model="form.total_spaces" min="1" max="100" step="1"
+                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px]"
+                                placeholder="1" required />
+                            <p class="mt-1 text-xs text-gray-500">Number of vehicles this spot can accommodate simultaneously.</p>
+                            <p v-if="form.errors.total_spaces" class="mt-1 text-xs text-red-600 font-medium">{{ form.errors.total_spaces }}</p>
+                        </div>
+                    </div>
+
+                    <p v-if="form.errors.price" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.price }}</p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-2">
                         <div>
                             <div class="flex items-center justify-between mb-2">
                                 <label class="block text-[14px] font-bold text-gray-900">Price hourly (CA$)</label>
