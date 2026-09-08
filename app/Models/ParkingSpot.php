@@ -21,6 +21,7 @@ class ParkingSpot extends Model
         'latitude',
         'longitude',
         'parking_type',
+        'total_spaces',
         'price_hourly',
         'price_monthly',
         'price_daily',
@@ -28,11 +29,15 @@ class ParkingSpot extends Model
         'features',
         'additional_points',
         'is_active',
+        'is_approved',
         'contact_number',
         'dummy',
+        'service_fee_percentage',
+        'service_fee_monthly_percentage',
     ];
 
     protected $casts = [
+        'total_spaces' => 'integer',
         'is_24_7' => 'boolean',
         'features' => 'array',
         'additional_points' => 'array',
@@ -40,7 +45,10 @@ class ParkingSpot extends Model
         'price_monthly' => 'decimal:2',
         'price_daily' => 'decimal:2',
         'is_active' => 'boolean',
+        'is_approved' => 'boolean',
         'dummy' => 'boolean',
+        'service_fee_percentage' => 'decimal:2',
+        'service_fee_monthly_percentage' => 'decimal:2',
     ];
 
     public function user(): BelongsTo

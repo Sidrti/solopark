@@ -56,7 +56,7 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->renderHook(
-                \Filament\View\PanelsRenderHook::HEAD_END,
+                \Filament\View\PanelsRenderHook::BODY_END,
                 fn () => view('filament.hooks.google-maps-autocomplete')
             );
     }

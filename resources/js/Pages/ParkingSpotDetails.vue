@@ -44,8 +44,31 @@ const props = defineProps({
     serviceFee: {
         type: Number,
         default: 5.00
+    },
+    serviceFeeRate: {
+        type: Number,
+        default: 10.00
+    },
+    serviceFeeMonthlyRate: {
+        type: Number,
+        default: 30.00
+    },
+    totalSpaces: {
+        type: Number,
+        default: 1
+    },
+    availableSpaces: {
+        type: Number,
+        default: 1
+    },
+    spaces: {
+        type: [Number, String],
+        default: 1
     }
 });
+
+const maxSpaces = computed(() => Math.max(1, props.availableSpaces ?? props.totalSpaces ?? 1));
+const spacesCount = ref(Math.min(Math.max(1, Number(props.spaces) || 1), maxSpaces.value));
 
 const oneTimeStartTime = ref(props.start ? new Date(props.start) : new Date());
 const oneTimeEndTime = ref(props.end ? new Date(props.end) : new Date(oneTimeStartTime.value.getTime() + 3 * 60 * 60 * 1000));
@@ -82,30 +105,38 @@ const durationMinutes = computed(() => {
 
         const [sh, sm] = sParts.map(Number);
         const [eh, em] = eParts.map(Number);
-        const dailyDurationMins = (eh * 60 + em) - (sh * 60 + sm);
+        let dailyDurationMins = (eh * 60 + em) - (sh * 60 + sm);
+        if (dailyDurationMins <= 0) {
+            dailyDurationMins += 24 * 60;
+        }
 
-        return Math.max(dailyDurationMins, 0) * dayCount;
+        return dailyDurationMins * dayCount;
     }
 });
 
 const durationUnits = computed(() => Math.ceil(durationMinutes.value / 30));
 
 const baseCost = computed(() => {
+    let singleCost = 0;
     if (props.type === 'monthly' && props.startDate && props.endDate) {
         const start = new Date(props.startDate);
         const end = new Date(props.endDate);
         const diffDays = Math.round((end - start) / (24 * 60 * 60 * 1000));
         const months = Math.ceil(diffDays / 30);
-        return (props.spot.price_monthly || props.spot.price) * months;
+        singleCost = (props.spot.price_monthly || props.spot.price) * months;
+    } else {
+        const rate = props.type === 'recurring' 
+            ? (props.spot.price_daily || props.spot.price_hourly) 
+            : props.spot.price_hourly;
+        singleCost = (rate / 2) * durationUnits.value;
     }
-    const rate = props.type === 'recurring' 
-        ? (props.spot.price_daily || props.spot.price_hourly) 
-        : props.spot.price_hourly;
-    return (rate / 2) * durationUnits.value;
+    return singleCost * spacesCount.value;
 });
 
 const serviceFeeAmount = computed(() => {
-    const rate = props.type === 'monthly' ? 0.30 : 0.10;
+    const rate = props.type === 'monthly'
+        ? ((props.serviceFeeMonthlyRate ?? 30) / 100)
+        : ((props.serviceFeeRate ?? 10) / 100);
     return baseCost.value * rate;
 });
 const taxAmount = computed(() => (baseCost.value + serviceFeeAmount.value) * 0.13);
@@ -143,7 +174,7 @@ const formatDateTimeShort = (date) => {
                     <div>
                         <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900 mb-3">{{
                             spot.address }}</h1>
-                        <div class="flex items-center flex-wrap">
+                        <div class="flex items-center flex-wrap gap-2">
                             <div class="flex items-center text-[#1866ed]">
                                 <svg class="w-5 h-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -152,6 +183,9 @@ const formatDateTimeShort = (date) => {
                                 </svg>
                                 <span class="font-bold text-[15px]">Verified Spot</span>
                             </div>
+                            <span v-if="(totalSpaces > 1 || spot.total_spaces > 1)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-[#1866ed] border border-blue-200">
+                                {{ spot.total_spaces || totalSpaces }} Total Spaces
+                            </span>
                         </div>
                     </div>
 
@@ -224,6 +258,35 @@ const formatDateTimeShort = (date) => {
                         </div>
                         <div class="text-[14px] text-gray-500 mb-6">Includes all service fees and taxes</div>
 
+                        <!-- Spaces Selector -->
+                        <div v-if="(totalSpaces > 1 || spot.total_spaces > 1)" class="mb-6 p-4 rounded-xl bg-gray-50 border border-gray-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-[13px] font-bold text-gray-900">Number of Spaces</div>
+                                    <div class="text-[11px] text-gray-500">{{ availableSpaces }} available</div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button
+                                        type="button"
+                                        @click="spacesCount > 1 ? spacesCount-- : null"
+                                        :disabled="spacesCount <= 1"
+                                        class="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition bg-white shadow-sm"
+                                    >
+                                        -
+                                    </button>
+                                    <span class="w-8 text-center font-extrabold text-[15px] text-gray-900">{{ spacesCount }}</span>
+                                    <button
+                                        type="button"
+                                        @click="spacesCount < maxSpaces ? spacesCount++ : null"
+                                        :disabled="spacesCount >= maxSpaces"
+                                        class="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition bg-white shadow-sm"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="border border-gray-300 rounded-xl overflow-hidden mb-6">
                             <div v-if="type === 'one-time'" class="grid grid-cols-1 sm:grid-cols-2">
                                 <div class="p-3 border-b sm:border-b-0 sm:border-r border-gray-300">
@@ -272,7 +335,7 @@ const formatDateTimeShort = (date) => {
                         </div>
 
                         <button
-                            @click="router.visit(route('spot-book', { id: props.spot.id, type: props.type, start: props.start, end: props.end, startDate: props.startDate, endDate: props.endDate, startTime: props.startTime, endTime: props.endTime, days: props.days }))"
+                            @click="router.visit(route('spot-book', { id: props.spot.id, type: props.type, start: props.start, end: props.end, startDate: props.startDate, endDate: props.endDate, startTime: props.startTime, endTime: props.endTime, days: props.days, spaces: spacesCount }))"
                             class="w-full flex justify-center py-4 px-4 border border-transparent rounded-[12px] shadow-sm text-[16px] font-extrabold text-white bg-[#1866ed] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1866ed] transition-colors mb-4">
                             Book Now
                         </button>

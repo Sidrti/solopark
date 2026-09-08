@@ -132,7 +132,11 @@ const pastBookings = computed(() => {
                             class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                             alt="Parking Spot">
                         <div class="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
-                            <span :class="[
+                            <span v-if="!spot.is_approved"
+                                class="inline-flex items-center backdrop-blur-md bg-amber-500/80 text-white text-[12px] font-bold px-3 py-1 rounded-full uppercase tracking-widest leading-none shadow-sm">
+                                Pending Approval
+                            </span>
+                            <span v-else :class="[
                                 'inline-flex items-center backdrop-blur-md text-white text-[12px] font-bold px-3 py-1 rounded-full uppercase tracking-widest leading-none',
                                 spot.is_active ? 'bg-green-500/50' : 'bg-red-500/50'
                             ]">
@@ -167,8 +171,13 @@ const pastBookings = computed(() => {
                         </p>
 
                         <div class="flex items-center justify-between pt-5 border-t border-gray-50">
-                            <div class="flex items-center text-[14px] font-bold text-[#1866ed]">
-                                {{ spot.bookings.length }} Bookings
+                            <div class="flex items-center gap-2">
+                                <span class="text-[14px] font-bold text-[#1866ed]">
+                                    {{ spot.bookings.length }} Bookings
+                                </span>
+                                <span v-if="spot.total_spaces > 1" class="text-xs bg-blue-50 text-[#1866ed] font-semibold px-2.5 py-0.5 rounded-full border border-blue-100">
+                                    {{ spot.total_spaces }} Spaces
+                                </span>
                             </div>
 
                             <button
@@ -209,8 +218,16 @@ const pastBookings = computed(() => {
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <!-- Toggle Switch -->
-                        <div class="flex items-center gap-3 pr-4 border-r border-gray-100">
+                        <!-- Toggle Switch / Approval Status -->
+                        <div v-if="!selectedSpot.is_approved" class="flex items-center gap-2 pr-4 border-r border-gray-100">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                <svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Pending Admin Approval
+                            </span>
+                        </div>
+                        <div v-else class="flex items-center gap-3 pr-4 border-r border-gray-100">
                             <span class="text-sm font-bold"
                                 :class="selectedSpot.is_active ? 'text-green-600' : 'text-gray-400'">
                                 {{ selectedSpot.is_active ? 'Listing Active' : 'Listing Paused' }}
@@ -234,9 +251,17 @@ const pastBookings = computed(() => {
                 </div>
 
                 <!-- Modal Body -->
-                <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-10">
+                <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">
+                    <!-- Pending Approval Notice -->
+                    <div v-if="!selectedSpot.is_approved" class="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start sm:items-center gap-3 text-amber-900 text-sm">
+                        <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>This parking spot is currently pending administrator review and approval. It will become discoverable and ready for bookings once approved by the Solopark team.</span>
+                    </div>
+
                     <!-- Stats Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                         <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
                             <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">Total Earnings</p>
                             <h4 class="text-3xl font-black text-gray-900">
@@ -244,7 +269,11 @@ const pastBookings = computed(() => {
                             </h4>
                         </div>
                         <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                            <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">Upcoming Bookings</p>
+                            <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">Total Spaces</p>
+                            <h4 class="text-3xl font-black text-gray-900">{{ selectedSpot.total_spaces || 1 }}</h4>
+                        </div>
+                        <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
+                            <p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-2">Upcoming</p>
                             <h4 class="text-3xl font-black text-gray-900">{{ upcomingBookings.length }}</h4>
                         </div>
                         <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100">
@@ -290,9 +319,12 @@ const pastBookings = computed(() => {
                                             <p class="text-xs font-bold">{{ formatDate(booking.start_time) }}</p>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Pricing</p>
+                                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Details</p>
                                             <p class="text-xs text-gray-600">
-                                                Duration: {{ getDurationUnits(booking.start_time, booking.end_time) }} half-hours
+                                                {{ getDurationUnits(booking.start_time, booking.end_time) }} half-hrs
+                                                <span v-if="booking.spaces_count && booking.spaces_count > 1" class="font-bold text-[#1866ed]">
+                                                    ({{ booking.spaces_count }} spaces)
+                                                </span>
                                             </p>
                                         </div>
                                         <div class="text-right">

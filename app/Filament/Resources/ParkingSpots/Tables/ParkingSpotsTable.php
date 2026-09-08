@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources\ParkingSpots\Tables;
 
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -43,6 +45,9 @@ class ParkingSpotsTable
                     ->label('Type')
                     ->badge()
                     ->sortable(),
+                TextColumn::make('total_spaces')
+                    ->label('Spaces')
+                    ->sortable(),
                 TextColumn::make('price_hourly')
                     ->label('Hourly')
                     ->formatStateUsing(fn ($state) => $state ? 'CA$ ' . number_format($state, 2) : '—')
@@ -55,9 +60,17 @@ class ParkingSpotsTable
                     ->label('Monthly')
                     ->formatStateUsing(fn ($state) => $state ? 'CA$ ' . number_format($state, 2) : '—')
                     ->sortable(),
+                TextColumn::make('service_fee_percentage')
+                    ->label('Fee (H/M)')
+                    ->formatStateUsing(fn ($state, $record) => ($state ? number_format($state, 0) . '%' : '10%') . ' / ' . ($record->service_fee_monthly_percentage ? number_format($record->service_fee_monthly_percentage, 0) . '%' : '30%'))
+                    ->sortable(),
                 IconColumn::make('is_24_7')
                     ->boolean()
                     ->label('24/7')
+                    ->sortable(),
+                IconColumn::make('is_approved')
+                    ->boolean()
+                    ->label('Approved')
                     ->sortable(),
                 IconColumn::make('is_active')
                     ->boolean()
@@ -86,12 +99,35 @@ class ParkingSpotsTable
                         'Covered Lot' => 'Covered Lot',
                         'Backyard' => 'Backyard',
                     ]),
+                TernaryFilter::make('is_approved')
+                    ->label('Approval Status')
+                    ->placeholder('All Listings')
+                    ->trueLabel('Approved')
+                    ->falseLabel('Pending Approval'),
                 TernaryFilter::make('is_active')
                     ->label('Active Status'),
                 TernaryFilter::make('is_24_7')
                     ->label('24/7 Availability'),
             ])
             ->recordActions([
+                Action::make('approve')
+                    ->label('Approve')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->visible(fn ($record) => !$record->is_approved)
+                    ->requiresConfirmation()
+                    ->modalHeading('Approve Parking Spot')
+                    ->modalDescription('Are you sure you want to approve this parking spot? It will be marked as approved and active for bookings.')
+                    ->action(function ($record) {
+                        $record->update([
+                            'is_approved' => true,
+                            'is_active' => true,
+                        ]);
+                        Notification::make()
+                            ->title('Parking spot approved and activated')
+                            ->success()
+                            ->send();
+                    }),
                 EditAction::make(),
                 DeleteAction::make(),
             ])

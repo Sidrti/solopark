@@ -76,8 +76,18 @@ const mapLat = props.lat ? parseFloat(props.lat) : 43.6507;
 const mapLng = props.lng ? parseFloat(props.lng) : -79.3830;
 const mapCenter = ref({ lat: mapLat, lng: mapLng });
 
-// Use backend data if available, fallback to mock if completely empty
-const parkingSpots = ref(props.spots);
+// Use backend data, ensuring available parking spots appear first
+const parkingSpots = computed(() => {
+    const list = Array.isArray(props.spots) ? [...props.spots] : Object.values(props.spots || {});
+    return list.sort((a, b) => {
+        const aAvail = (a.is_active && !a.dummy) ? 1 : 0;
+        const bAvail = (b.is_active && !b.dummy) ? 1 : 0;
+        if (aAvail !== bAvail) {
+            return bAvail - aAvail;
+        }
+        return 0;
+    });
+});
 const userLocation = ref(null);
 const mapRef = ref(null);
 
@@ -149,12 +159,31 @@ const handleUpdateSearch = () => {
 
         params.start = startTimeOneTime.value;
         params.end = endTimeOneTime.value;
-    } else {
+    } else if (searchType.value === 'recurring') {
+        if (searchStartTime.value && searchEndTime.value) {
+            const [sHour, sMin] = searchStartTime.value.split(':').map(Number);
+            const [eHour, eMin] = searchEndTime.value.split(':').map(Number);
+            let diffMins = (eHour * 60 + eMin) - (sHour * 60 + sMin);
+            if (diffMins <= 0) {
+                diffMins += 24 * 60;
+            }
+            if (diffMins < 60) {
+                alert('Please select a time range of at least 1 hour.');
+                return;
+            }
+            if (diffMins > 720) {
+                alert('Daily bookings cover up to 12 hours per selected day.');
+                return;
+            }
+        }
         params.startDate = searchStartDate.value;
         params.endDate = searchEndDate.value;
         params.startTime = searchStartTime.value;
         params.endTime = searchEndTime.value;
         params.days = searchDays.value;
+    } else {
+        params.startDate = searchStartDate.value;
+        params.endDate = searchEndDate.value;
     }
 
     router.get('/search', params);
@@ -305,6 +334,9 @@ const formatDateTimeShort = (dateStr) => {
                                                     </path>
                                                 </svg>
                                                 {{ spot.walk }} <span class="mx-1">•</span> {{ spot.dist }} km
+                                                <span v-if="spot.total_spaces > 1" class="ml-1.5 font-semibold text-[#1866ed]">
+                                                    • {{ spot.total_spaces }} spaces
+                                                </span>
                                             </div>
                                         </div>
                                         <div class="text-right shrink-0">

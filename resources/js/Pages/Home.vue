@@ -175,17 +175,25 @@ const handleSearch = () => {
         params.start = startTime.value;
         params.end = endTime.value;
     } else if (activeTab.value === 'recurring') {
-        if (recurringDays.value.length < 2) {
-            alert('Please select at least 2 days for a daily booking.');
+        if (recurringDays.value.length < 1) {
+            alert('Please select at least 1 day for a daily booking.');
             return;
         }
 
         const [sHour, sMin] = recurringStartTime.value.split(':').map(Number);
         const [eHour, eMin] = recurringEndTime.value.split(':').map(Number);
-        const diffMins = (eHour * 60 + eMin) - (sHour * 60 + sMin);
+        let diffMins = (eHour * 60 + eMin) - (sHour * 60 + sMin);
+        if (diffMins <= 0) {
+            diffMins += 24 * 60;
+        }
         
-        if (diffMins < 300) {
-            alert('Daily parking requires a minimum of 5 hours per selected day.');
+        if (diffMins < 60) {
+            alert('Please select a time range of at least 1 hour.');
+            return;
+        }
+
+        if (diffMins > 720) {
+            alert('Daily bookings cover up to 12 hours per selected day.');
             return;
         }
 
@@ -324,6 +332,7 @@ const handleSearch = () => {
                                     <label class="block text-xs font-semibold text-gray-500 mb-1">Daily End Time</label>
                                     <input type="time" v-model="recurringEndTime"
                                         class="block w-full text-sm font-medium border-0 p-0 focus:ring-0" />
+                                    <p class="text-[11px] text-gray-500 mt-1">Covers up to 12 hours per day</p>
                                 </div>
                             </div>
 

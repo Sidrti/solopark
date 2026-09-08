@@ -32,8 +32,13 @@ class ParkingSpotForm
                             ->label('Owner / User')
                             ->helperText('Select the user who owns this slot. Admin can add spots for any registered user.'),
 
-                        Grid::make(2)
+                        Grid::make(3)
                             ->schema([
+                                Toggle::make('is_approved')
+                                    ->label('Admin Approved')
+                                    ->default(true)
+                                    ->helperText('When enabled, this slot is approved for live listing on Solopark.'),
+
                                 Toggle::make('is_active')
                                     ->label('Listing Active')
                                     ->default(true)
@@ -66,6 +71,14 @@ class ParkingSpotForm
                                 'Backyard' => 'Backyard',
                             ])
                             ->required(),
+
+                        TextInput::make('total_spaces')
+                            ->label('Total Spaces Available')
+                            ->numeric()
+                            ->minValue(1)
+                            ->default(1)
+                            ->required()
+                            ->helperText('Number of parking spaces available at this location.'),
 
                         TextInput::make('contact_number')
                             ->label('Contact Phone Number')
@@ -102,6 +115,31 @@ class ParkingSpotForm
                     ])
                     ->columns(3),
 
+                Section::make('Solopark Service Fees')
+                    ->description('Set the Solopark platform service fee percentages charged to the booker for this parking slot.')
+                    ->schema([
+                        TextInput::make('service_fee_percentage')
+                            ->numeric()
+                            ->suffix('%')
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->default(10.00)
+                            ->label('Hourly & Daily Service Fee (%)')
+                            ->helperText('Service fee percentage charged to booker on one-time and recurring bookings (Default: 10%).')
+                            ->required(),
+
+                        TextInput::make('service_fee_monthly_percentage')
+                            ->numeric()
+                            ->suffix('%')
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->default(30.00)
+                            ->label('Monthly Service Fee (%)')
+                            ->helperText('Service fee percentage charged to booker on monthly subscriptions (Default: 30%).')
+                            ->required(),
+                    ])
+                    ->columns(2),
+
                 Section::make('Location Details')
                     ->description('Enter address via Google Autocomplete to automatically populate city, province, country, and GPS coordinates.')
                     ->schema([
@@ -116,80 +154,51 @@ class ParkingSpotForm
                                 'id' => 'admin-spot-address-input',
                                 'autocomplete' => 'off',
                                 'x-on:keydown.enter.prevent' => '',
-                                'x-data' => '{}',
-                                'x-init' => "
-                                    const initAddressAutocomplete = () => {
-                                        if (!window.google || !window.google.maps || !window.google.maps.places) {
-                                            setTimeout(initAddressAutocomplete, 300);
-                                            return;
-                                        }
-                                        const autocomplete = new window.google.maps.places.Autocomplete(\$el, {
-                                            types: ['geocode'],
-                                        });
-                                        autocomplete.addListener('place_changed', () => {
-                                            const place = autocomplete.getPlace();
-                                            if (!place || !place.geometry) return;
-
-                                            const formattedAddress = place.formatted_address || place.name || '';
-                                            const lat = place.geometry.location.lat();
-                                            const lng = place.geometry.location.lng();
-
-                                            let city = '';
-                                            let state = '';
-                                            let country = '';
-
-                                            if (place.address_components) {
-                                                for (const component of place.address_components) {
-                                                    const types = component.types;
-                                                    if (types.includes('locality') || types.includes('postal_town')) {
-                                                        city = component.long_name;
-                                                    } else if (types.includes('administrative_area_level_1')) {
-                                                        state = component.short_name;
-                                                    } else if (types.includes('country')) {
-                                                        country = component.long_name;
-                                                    }
-                                                }
-                                            }
-
-                                            \$wire.set('data.address', formattedAddress);
-                                            \$wire.set('data.latitude', lat);
-                                            \$wire.set('data.longitude', lng);
-                                            \$wire.set('data.city', city);
-                                            \$wire.set('data.state', state);
-                                            \$wire.set('data.country', country);
-                                        });
-                                    };
-                                    initAddressAutocomplete();
-                                ",
+                                'x-data' => 'filamentGoogleAutocomplete($wire)',
                             ]),
 
                         TextInput::make('city')
                             ->label('City')
                             ->placeholder('Auto-populated')
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->extraInputAttributes([
+                                'id' => 'admin-spot-city-input',
+                            ]),
 
                         TextInput::make('state')
                             ->label('Province / State')
                             ->placeholder('Auto-populated')
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->extraInputAttributes([
+                                'id' => 'admin-spot-state-input',
+                            ]),
 
                         TextInput::make('country')
                             ->label('Country')
                             ->default('Canada')
                             ->placeholder('Auto-populated')
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->extraInputAttributes([
+                                'id' => 'admin-spot-country-input',
+                            ]),
 
                         TextInput::make('latitude')
                             ->label('Latitude')
                             ->numeric()
                             ->step('any')
-                            ->placeholder('Auto-populated (e.g. 43.6532)'),
+                            ->placeholder('Auto-populated (e.g. 43.6532)')
+                            ->extraInputAttributes([
+                                'id' => 'admin-spot-latitude-input',
+                            ]),
 
                         TextInput::make('longitude')
                             ->label('Longitude')
                             ->numeric()
                             ->step('any')
-                            ->placeholder('Auto-populated (e.g. -79.3832)'),
+                            ->placeholder('Auto-populated (e.g. -79.3832)')
+                            ->extraInputAttributes([
+                                'id' => 'admin-spot-longitude-input',
+                            ]),
                     ])
                     ->columns(3),
 

@@ -33,6 +33,7 @@ class ParkingSpotController extends Controller
                             'tax' => $booking->tax,
                             'gateway_fee' => $booking->gateway_fee,
                             'total_price' => round($booking->total_price, 0),
+                            'spaces_count' => (int) ($booking->spaces_count ?? 1),
                             'status' => $booking->status,
                         ];
                     }
@@ -46,6 +47,10 @@ class ParkingSpotController extends Controller
                     'price_monthly' => $spot->price_monthly,
                     'price_daily' => $spot->price_daily,
                     'is_active' => $spot->is_active,
+                    'is_approved' => (bool) $spot->is_approved,
+                    'total_spaces' => (int) ($spot->total_spaces ?? 1),
+                    'service_fee_percentage' => (float) ($spot->service_fee_percentage ?? 10.00),
+                    'service_fee_monthly_percentage' => (float) ($spot->service_fee_monthly_percentage ?? 30.00),
                     'bookings' => $bookings,
                     'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=400',
                 ];
@@ -67,7 +72,7 @@ class ParkingSpotController extends Controller
         $end = $request->input('end');
         $locationStr = $request->input('location');
 
-        $query = ParkingSpot::query()->with('photos');
+        $query = ParkingSpot::query()->where('is_approved', true)->with('photos');
 
         $latitude = $lat ?: 43.6532; // Default to Toronto
         $longitude = $lng ?: -79.3832;
@@ -75,9 +80,11 @@ class ParkingSpotController extends Controller
         if ($lat && $lng) {
             $query->select('*')
                 ->selectRaw("(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance", [$latitude, $longitude, $latitude])
+                ->orderByRaw('CASE WHEN is_active = 1 AND dummy = 0 THEN 0 ELSE 1 END ASC')
                 ->orderBy('distance');
         } else {
-            $query->latest();
+            $query->orderByRaw('CASE WHEN is_active = 1 AND dummy = 0 THEN 0 ELSE 1 END ASC')
+                ->latest();
         }
 
         $timezone = $request->input('timezone', config('app.timezone'));
@@ -104,11 +111,15 @@ class ParkingSpotController extends Controller
                 $startUtc = $startDt->copy()->setTimezone('UTC')->toDateTimeString();
                 $endUtc = $endDt->copy()->setTimezone('UTC')->toDateTimeString();
 
-                // Filter out spots with overlapping bookings
-                $query->whereDoesntHave('bookings', function ($q) use ($startUtc, $endUtc) {
-                    $q->where('start_time', '<', $endUtc)
-                        ->where('end_time', '>', $startUtc);
-                });
+                // Filter out spots that don't have enough capacity
+                $query->whereRaw('(parking_spots.total_spaces - (
+                    SELECT COALESCE(SUM(spaces_count), 0)
+                    FROM bookings
+                    WHERE bookings.parking_spot_id = parking_spots.id
+                      AND bookings.start_time < ?
+                      AND bookings.end_time > ?
+                      AND bookings.status != "cancelled"
+                )) >= ?', [$endUtc, $startUtc, 1]);
             } catch (\Exception $e) {
                 // Ignore parsing errors
                 }
@@ -129,17 +140,26 @@ class ParkingSpotController extends Controller
 
                     // For recurring, the spot must be available on ALL requested days within the range
                     // and have NO overlapping bookings on ANY of those days
-                    $query->where(function ($q) use ($days, $startTime, $endTime, $startDate, $endDate, $timezone) {
-                        foreach ($days as $day) {
-                            $q->whereHas(
-                                'availabilities',
-                                function ($subQ) use ($day, $startTime, $endTime) {
-                                    $subQ->where('day_of_week', $day)
-                                        ->where('start_time', '<=', $startTime)
-                                        ->where('end_time', '>=', $endTime);
+                    $query->where(function ($q) use ($days, $startTime, $endTime) {
+                        $q->where('is_24_7', true)
+                            ->orWhere(function ($availQ) use ($days, $startTime, $endTime) {
+                                foreach ($days as $day) {
+                                    $availQ->whereHas(
+                                        'availabilities',
+                                        function ($subQ) use ($day, $startTime, $endTime) {
+                                            $subQ->where('day_of_week', $day);
+                                            if ($startTime <= $endTime) {
+                                                $subQ->where('start_time', '<=', $startTime)
+                                                    ->where('end_time', '>=', $endTime);
+                                            } else {
+                                                // Overnight: slot availability covering the night schedule
+                                                $subQ->where('start_time', '<=', $startTime)
+                                                    ->where('end_time', '>=', $endTime);
+                                            }
+                                        }
+                                    );
                                 }
-                            );
-                        }
+                            });
                     });
 
                     // Check for overlaps on each requested day in the range
@@ -148,13 +168,22 @@ class ParkingSpotController extends Controller
 
                     while ($current->lte($endRange)) {
                         if (in_array($current->format('D'), $days)) {
-                            $dayStartUtc = \Carbon\Carbon::parse($current->format('Y-m-d') . ' ' . $startTime, $timezone)->setTimezone('UTC')->toDateTimeString();
-                            $dayEndUtc = \Carbon\Carbon::parse($current->format('Y-m-d') . ' ' . $endTime, $timezone)->setTimezone('UTC')->toDateTimeString();
+                            $startCarbon = \Carbon\Carbon::parse($current->format('Y-m-d') . ' ' . $startTime, $timezone);
+                            $endCarbon = \Carbon\Carbon::parse($current->format('Y-m-d') . ' ' . $endTime, $timezone);
+                            if ($endCarbon->lte($startCarbon)) {
+                                $endCarbon->addDay();
+                            }
+                            $dayStartUtc = $startCarbon->setTimezone('UTC')->toDateTimeString();
+                            $dayEndUtc = $endCarbon->setTimezone('UTC')->toDateTimeString();
 
-                            $query->whereDoesntHave('bookings', function ($q) use ($dayStartUtc, $dayEndUtc) {
-                                $q->where('start_time', '<', $dayEndUtc)
-                                    ->where('end_time', '>', $dayStartUtc);
-                            });
+                            $query->whereRaw('(parking_spots.total_spaces - (
+                                SELECT COALESCE(SUM(spaces_count), 0)
+                                FROM bookings
+                                WHERE bookings.parking_spot_id = parking_spots.id
+                                  AND bookings.start_time < ?
+                                  AND bookings.end_time > ?
+                                  AND bookings.status != "cancelled"
+                            )) >= ?', [$dayEndUtc, $dayStartUtc, 1]);
                         }
                         $current->addDay();
                     }
@@ -174,10 +203,14 @@ class ParkingSpotController extends Controller
                 $startUtc = \Carbon\Carbon::parse($startDate, $timezone)->setTimezone('UTC')->toDateTimeString();
                 $endUtc = \Carbon\Carbon::parse($endDate, $timezone)->setTimezone('UTC')->toDateTimeString();
 
-                $query->whereDoesntHave('bookings', function ($q) use ($startUtc, $endUtc) {
-                    $q->where('start_time', '<', $endUtc)
-                        ->where('end_time', '>', $startUtc);
-                });
+                $query->whereRaw('(parking_spots.total_spaces - (
+                    SELECT COALESCE(SUM(spaces_count), 0)
+                    FROM bookings
+                    WHERE bookings.parking_spot_id = parking_spots.id
+                      AND bookings.start_time < ?
+                      AND bookings.end_time > ?
+                      AND bookings.status != "cancelled"
+                )) >= ?', [$endUtc, $startUtc, 1]);
             }
         }
 
@@ -229,6 +262,9 @@ class ParkingSpotController extends Controller
                     $sParts = explode(':', $startTime);
                     $eParts = explode(':', $endTime);
                     $dailyMinutes = ($eParts[0] * 60 + $eParts[1]) - ($sParts[0] * 60 + $sParts[1]);
+                    if ($dailyMinutes <= 0) {
+                        $dailyMinutes += 24 * 60;
+                    }
                     $dailyUnits = max(0, ceil($dailyMinutes / 30));
 
                     $current = $startRange->copy();
@@ -244,7 +280,9 @@ class ParkingSpotController extends Controller
                 $baseCost = (($spot->price_daily ?? $spot->price_hourly) / 2) * $durationUnits;
             }
 
-            $serviceRate = ($searchType === 'monthly') ? 0.30 : 0.10;
+            $serviceRate = ($searchType === 'monthly')
+                ? (float) (($spot->service_fee_monthly_percentage ?? 30.00) / 100)
+                : (float) (($spot->service_fee_percentage ?? 10.00) / 100);
             $finalPrice = $baseCost * (1 + $serviceRate) * 1.13 * 1.03;
 
             // Deterministic hash-based offset to obfuscate exact lat/lng on search map
@@ -276,10 +314,19 @@ class ParkingSpotController extends Controller
                 'lng' => $approxLng,
                 'dummy' => (bool) $spot->dummy,
                 'is_active' => (bool) $spot->is_active,
+                'is_approved' => (bool) $spot->is_approved,
+                'total_spaces' => (int) ($spot->total_spaces ?? 1),
+                'service_fee_percentage' => (float) ($spot->service_fee_percentage ?? 10.00),
+                'service_fee_monthly_percentage' => (float) ($spot->service_fee_monthly_percentage ?? 30.00),
                 'price_daily' => $spot->price_daily,
                 'price_hourly' => $spot->price_hourly,
             ];
         });
+
+        // Ensure all available spots appear first, unavailable listings afterward
+        $spots = $spots->sortBy([
+            fn ($a, $b) => ($b['is_active'] && !$b['dummy'] ? 1 : 0) <=> ($a['is_active'] && !$a['dummy'] ? 1 : 0),
+        ])->values();
 
         return \Inertia\Inertia::render('ParkingSpotListing', [
             'canLogin' => \Illuminate\Support\Facades\Route::has('login'),
@@ -308,6 +355,7 @@ class ParkingSpotController extends Controller
             'price' => 'nullable|numeric|min:4',
             'price_monthly' => 'nullable|numeric|min:0',
             'price_daily' => 'nullable|numeric|min:1',
+            'total_spaces' => 'nullable|integer|min:1|max:100',
             'is24_7' => 'boolean',
             'features' => 'array',
             'additionalPoints' => 'array',
@@ -340,6 +388,7 @@ class ParkingSpotController extends Controller
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
             'parking_type' => $validated['type'],
+            'total_spaces' => max(1, (int) $request->input('total_spaces', 1)),
             'price_hourly' => $validated['price'] ?? null,
             'price_monthly' => $validated['price_monthly'] ?? null,
             'price_daily' => $validated['price_daily'] ?? null,
@@ -347,6 +396,10 @@ class ParkingSpotController extends Controller
             'features' => $validated['features'] ?? [],
             'additional_points' => $validated['additionalPoints'] ?? [],
             'contact_number' => $validated['contact_number'],
+            'is_active' => false,
+            'is_approved' => false,
+            'service_fee_percentage' => 10.00,
+            'service_fee_monthly_percentage' => 30.00,
         ]);
 
         if (!empty($validated['selectedDays'])) {
@@ -374,16 +427,22 @@ class ParkingSpotController extends Controller
             }
         }
 
-        return redirect()->back()->with('success', 'Parking spot listed successfully!');
+        return redirect()->back()->with('success', 'Parking spot submitted successfully! It is pending admin approval and will be activated once approved.');
     }
 
     public function show($id, Request $request)
     {
         $spot = ParkingSpot::with(['photos', 'availabilities'])->findOrFail($id);
 
+        if (!$spot->is_approved && $spot->user_id !== Auth::id()) {
+            abort(404);
+        }
+
         $start = $request->input('start');
         $end = $request->input('end');
         $serviceFee = 5.00; // backend controlled fee
+        $serviceFeeRate = (float) ($spot->service_fee_percentage ?? 10.00);
+        $serviceFeeMonthlyRate = (float) ($spot->service_fee_monthly_percentage ?? 30.00);
 
         $photos = $spot->relationLoaded('photos') ? $spot->getRelation('photos') : collect([]);
         $firstPhoto = $photos->first();
@@ -399,9 +458,15 @@ class ParkingSpotController extends Controller
             }
         }
 
+        $totalSpaces = (int) ($spot->total_spaces ?? 1);
+        $availableSpaces = $this->getAvailableSpaces($spot, $request);
+        $requestedSpaces = max(1, (int) $request->input('spaces', 1));
+
         $formattedSpot = [
             'id' => $spot->id,
             'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
+            'total_spaces' => $totalSpaces,
+            'available_spaces' => $availableSpaces,
             'rating' => 4.8,
             'reviews' => 6.5,
             'price' => $request->input('type') === 'monthly'
@@ -432,13 +497,22 @@ class ParkingSpotController extends Controller
             'startTime' => $request->input('startTime'),
             'endTime' => $request->input('endTime'),
             'days' => $request->input('days'),
-            'serviceFee' => $serviceFee
+            'totalSpaces' => $totalSpaces,
+            'availableSpaces' => $availableSpaces,
+            'spaces' => min($availableSpaces > 0 ? $availableSpaces : 1, $requestedSpaces),
+            'serviceFee' => $serviceFee,
+            'serviceFeeRate' => $serviceFeeRate,
+            'serviceFeeMonthlyRate' => $serviceFeeMonthlyRate
         ]);
     }
 
     public function book($id, Request $request)
     {
         $spot = ParkingSpot::with(['photos'])->findOrFail($id);
+
+        if (!$spot->is_approved && $spot->user_id !== Auth::id()) {
+            abort(404);
+        }
 
         $type = $request->input('type', 'one-time');
         $start = $request->input('start');
@@ -451,13 +525,21 @@ class ParkingSpotController extends Controller
         $days = $request->input('days');
 
         $serviceFee = 5.00; // backend controlled fee
+        $serviceFeeRate = (float) ($spot->service_fee_percentage ?? 10.00);
+        $serviceFeeMonthlyRate = (float) ($spot->service_fee_monthly_percentage ?? 30.00);
 
         $photos = $spot->relationLoaded('photos') ? $spot->getRelation('photos') : collect([]);
         $firstPhoto = $photos->first();
 
+        $totalSpaces = (int) ($spot->total_spaces ?? 1);
+        $availableSpaces = $this->getAvailableSpaces($spot, $request);
+        $requestedSpaces = max(1, (int) $request->input('spaces', 1));
+
         $formattedSpot = [
             'id' => $spot->id,
             'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
+            'total_spaces' => $totalSpaces,
+            'available_spaces' => $availableSpaces,
             'price' => $type === 'monthly'
                 ? $spot->price_monthly
                 : ($type === 'recurring'
@@ -482,7 +564,12 @@ class ParkingSpotController extends Controller
             'startTimeForm' => $startTime,
             'endTimeForm' => $endTime,
             'days' => $days,
+            'totalSpaces' => $totalSpaces,
+            'availableSpaces' => $availableSpaces,
+            'spaces' => min($availableSpaces > 0 ? $availableSpaces : 1, $requestedSpaces),
             'serviceFee' => $serviceFee,
+            'serviceFeeRate' => $serviceFeeRate,
+            'serviceFeeMonthlyRate' => $serviceFeeMonthlyRate,
             'vehicles' => $vehicles,
             'stripeKey' => config('services.stripe.key')
         ]);
@@ -492,6 +579,10 @@ class ParkingSpotController extends Controller
     {
         if ($spot->user_id !== Auth::id()) {
             abort(403);
+        }
+
+        if (!$spot->is_approved) {
+            return back()->withErrors(['error' => 'This parking spot is pending admin approval and cannot be activated yet.']);
         }
 
         $spot->is_active = !$spot->is_active;
@@ -523,6 +614,7 @@ class ParkingSpotController extends Controller
                 'latitude' => $spot->latitude,
                 'longitude' => $spot->longitude,
                 'parking_type' => $spot->parking_type,
+                'total_spaces' => (int) ($spot->total_spaces ?? 1),
                 'price_hourly' => $spot->price_hourly,
                 'price_monthly' => $spot->price_monthly,
                 'is_24_7' => $spot->is_24_7,
@@ -549,6 +641,7 @@ class ParkingSpotController extends Controller
             'title' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'type' => 'required|string|in:Driveway,Garage,Uncovered Lot,Covered Lot,Backyard',
+            'total_spaces' => 'nullable|integer|min:1|max:100',
             'price' => 'nullable|numeric|min:4',
             'price_monthly' => 'nullable|numeric|min:0',
             'price_daily' => 'nullable|numeric|min:1',
@@ -585,6 +678,7 @@ class ParkingSpotController extends Controller
             'latitude' => $validated['latitude'] ?? $spot->latitude,
             'longitude' => $validated['longitude'] ?? $spot->longitude,
             'parking_type' => $validated['type'],
+            'total_spaces' => max(1, (int) $request->input('total_spaces', $spot->total_spaces ?? 1)),
             'price_hourly' => $validated['price'] ?? null,
             'price_monthly' => $validated['price_monthly'] ?? null,
             'price_daily' => $validated['price_daily'] ?? null,
@@ -659,5 +753,72 @@ class ParkingSpotController extends Controller
             ->findOrFail($id);
 
         return response()->json($spot->bookings);
+    }
+
+    private function getAvailableSpaces(ParkingSpot $spot, Request $request): int
+    {
+        $totalSpaces = (int) ($spot->total_spaces ?? 1);
+        $type = $request->input('type', 'one-time');
+        $start = $request->input('start');
+        $end = $request->input('end');
+        $bookedSpaces = 0;
+
+        if ($type === 'recurring') {
+            $startDate = $request->input('startDate');
+            $endDate = $request->input('endDate');
+            $startTime = $request->input('startTime');
+            $endTime = $request->input('endTime');
+            $days = explode(',', $request->input('days', ''));
+            $timezone = $request->input('timezone', config('app.timezone'));
+
+            if ($startDate && $endDate && $startTime && $endTime && !empty($days)) {
+                $current = \Carbon\Carbon::parse($startDate, $timezone);
+                $endRange = \Carbon\Carbon::parse($endDate, $timezone);
+                $maxBooked = 0;
+
+                while ($current->lte($endRange)) {
+                    if (in_array($current->format('D'), $days)) {
+                        $startCarbon = \Carbon\Carbon::parse($current->format('Y-m-d') . ' ' . $startTime, $timezone);
+                        $endCarbon = \Carbon\Carbon::parse($current->format('Y-m-d') . ' ' . $endTime, $timezone);
+                        if ($endCarbon->lte($startCarbon)) {
+                            $endCarbon->addDay();
+                        }
+                        $sUtc = $startCarbon->setTimezone('UTC')->toDateTimeString();
+                        $eUtc = $endCarbon->setTimezone('UTC')->toDateTimeString();
+
+                        $dayBooked = (int) $spot->bookings()
+                            ->where('status', '!=', 'cancelled')
+                            ->where('start_time', '<', $eUtc)
+                            ->where('end_time', '>', $sUtc)
+                            ->sum('spaces_count');
+
+                        if ($dayBooked > $maxBooked) {
+                            $maxBooked = $dayBooked;
+                        }
+                    }
+                    $current->addDay();
+                }
+                $bookedSpaces = $maxBooked;
+            }
+        } elseif ($type === 'monthly' && $request->input('startDate') && $request->input('endDate')) {
+            $timezone = $request->input('timezone', config('app.timezone'));
+            $sUtc = \Carbon\Carbon::parse($request->input('startDate'), $timezone)->setTimezone('UTC')->toDateTimeString();
+            $eUtc = \Carbon\Carbon::parse($request->input('endDate'), $timezone)->setTimezone('UTC')->toDateTimeString();
+            $bookedSpaces = (int) $spot->bookings()
+                ->where('status', '!=', 'cancelled')
+                ->where('start_time', '<', $eUtc)
+                ->where('end_time', '>', $sUtc)
+                ->sum('spaces_count');
+        } elseif ($start && $end) {
+            $sUtc = \Carbon\Carbon::parse($start)->setTimezone('UTC')->toDateTimeString();
+            $eUtc = \Carbon\Carbon::parse($end)->setTimezone('UTC')->toDateTimeString();
+            $bookedSpaces = (int) $spot->bookings()
+                ->where('status', '!=', 'cancelled')
+                ->where('start_time', '<', $eUtc)
+                ->where('end_time', '>', $sUtc)
+                ->sum('spaces_count');
+        }
+
+        return max(0, $totalSpaces - $bookedSpaces);
     }
 }

@@ -31,6 +31,7 @@ class BookingController extends Controller
             'timezone' => $booking->timezone,
             'is_recurring' => $booking->is_recurring,
             'recurring_group_id' => $booking->recurring_group_id,
+            'spaces_count' => (int) ($booking->spaces_count ?? 1),
             'spot' => [
             'id' => $booking->spot->id,
             'title' => $booking->spot->title,
@@ -67,7 +68,12 @@ class BookingController extends Controller
             'endTime' => 'required_if:type,recurring',
             'days' => 'required_if:type,recurring',
             'payment_intent_id' => 'required|string',
+            'spaces_count' => 'nullable|integer|min:1',
         ]);
+
+        $spot = ParkingSpot::findOrFail($validated['spot_id']);
+        $totalSpaces = $spot->total_spaces ?? 1;
+        $spacesCount = (int) ($validated['spaces_count'] ?? 1);
 
         if ($validated['type'] === 'one-time' || $validated['type'] === 'monthly') {
             $startTime = $validated['type'] === 'one-time'
@@ -78,6 +84,17 @@ class BookingController extends Controller
                 ? \Carbon\Carbon::parse($validated['end_time'])
                 : \Carbon\Carbon::parse($validated['endDate'], $validated['timezone'])->endOfDay()->setTimezone('UTC');
 
+            $bookedSpaces = Booking::where('parking_spot_id', $spot->id)
+                ->where('status', '!=', 'cancelled')
+                ->where('start_time', '<', $endTime)
+                ->where('end_time', '>', $startTime)
+                ->sum('spaces_count');
+
+            $availableSpaces = max(0, $totalSpaces - (int) $bookedSpaces);
+            if ($spacesCount > $availableSpaces) {
+                return back()->withErrors(['spaces_count' => "Only {$availableSpaces} space(s) available for the selected timeframe."]);
+            }
+
             $booking = Booking::create([
                 'user_id' => Auth::id(),
                 'parking_spot_id' => $validated['spot_id'],
@@ -85,6 +102,7 @@ class BookingController extends Controller
                 'start_time' => $startTime,
                 'end_time' => $endTime,
                 'mobile_number' => $validated['mobile_number'],
+                'spaces_count' => $spacesCount,
                 'subtotal' => $validated['subtotal'],
                 'service_fee' => $validated['service_fee'],
                 'tax' => $validated['tax'],
@@ -105,8 +123,27 @@ class BookingController extends Controller
             $pendingBookings = [];
             while ($current->lte($endDate)) {
                 if (in_array($current->format('D'), $days)) {
-                    $startUtc = \Carbon\Carbon::parse($current->format('Y-m-d') . ' ' . $validated['startTime'], $validated['timezone'])->setTimezone('UTC');
-                    $endUtc = \Carbon\Carbon::parse($current->format('Y-m-d') . ' ' . $validated['endTime'], $validated['timezone'])->setTimezone('UTC');
+                    $startCarbon = \Carbon\Carbon::parse($current->format('Y-m-d') . ' ' . $validated['startTime'], $validated['timezone']);
+                    $endCarbon = \Carbon\Carbon::parse($current->format('Y-m-d') . ' ' . $validated['endTime'], $validated['timezone']);
+                    if ($endCarbon->lte($startCarbon)) {
+                        $endCarbon->addDay();
+                    }
+                    if ($endCarbon->diffInMinutes($startCarbon) > 720) {
+                        return back()->withErrors(['endTime' => 'Daily bookings cover up to 12 hours per day.']);
+                    }
+                    $startUtc = $startCarbon->setTimezone('UTC');
+                    $endUtc = $endCarbon->setTimezone('UTC');
+
+                    $bookedSpaces = Booking::where('parking_spot_id', $spot->id)
+                        ->where('status', '!=', 'cancelled')
+                        ->where('start_time', '<', $endUtc)
+                        ->where('end_time', '>', $startUtc)
+                        ->sum('spaces_count');
+
+                    $availableSpaces = max(0, $totalSpaces - (int) $bookedSpaces);
+                    if ($spacesCount > $availableSpaces) {
+                        return back()->withErrors(['spaces_count' => "Only {$availableSpaces} space(s) available on " . $current->format('M d, Y') . " for the selected time."]);
+                    }
 
                     $pendingBookings[] = [
                         'user_id' => Auth::id(),
@@ -115,6 +152,7 @@ class BookingController extends Controller
                         'start_time' => $startUtc,
                         'end_time' => $endUtc,
                         'mobile_number' => $validated['mobile_number'],
+                        'spaces_count' => $spacesCount,
                         'status' => 'confirmed',
                         'timezone' => $validated['timezone'],
                         'is_recurring' => true,
@@ -254,6 +292,7 @@ class BookingController extends Controller
                 'timezone' => $booking->timezone,
                 'is_recurring' => $booking->is_recurring,
                 'recurring_group_id' => $booking->recurring_group_id,
+                'spaces_count' => (int) ($booking->spaces_count ?? 1),
                 'created_at' => $booking->created_at,
             ],
             'spot' => $formattedSpot,

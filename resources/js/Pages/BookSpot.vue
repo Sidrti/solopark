@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
+import { loadStripe } from '@stripe/stripe-js';
 import Navbar from '@/Components/Navbar.vue';
 
 const props = defineProps({
@@ -45,6 +46,14 @@ const props = defineProps({
         type: Number,
         default: 5.00
     },
+    serviceFeeRate: {
+        type: Number,
+        default: 10.00
+    },
+    serviceFeeMonthlyRate: {
+        type: Number,
+        default: 30.00
+    },
     vehicles: {
         type: Array,
         default: () => []
@@ -52,11 +61,24 @@ const props = defineProps({
     stripeKey: {
         type: String,
         required: true
+    },
+    spaces: {
+        type: [Number, String],
+        default: 1
+    },
+    totalSpaces: {
+        type: Number,
+        default: 1
+    },
+    availableSpaces: {
+        type: Number,
+        default: 1
     }
 });
 
-import { loadStripe } from '@stripe/stripe-js';
-import { onMounted } from 'vue';
+const maxSpaces = computed(() => Math.max(1, props.availableSpaces ?? props.totalSpaces ?? props.spot?.total_spaces ?? 1));
+const spacesCount = ref(Math.min(Math.max(1, Number(props.spaces) || 1), maxSpaces.value));
+const isUpdatingSpaces = ref(false);
 
 const stripe = ref(null);
 const elements = ref(null);
@@ -91,12 +113,46 @@ const initPaymentElement = async () => {
         const data = await response.json();
         clientSecret.value = data.clientSecret;
 
-        elements.value = stripe.value.elements({ clientSecret: clientSecret.value });
-        paymentElement.value = elements.value.create('payment');
-        paymentElement.value.mount('#payment-element');
+        if (paymentElement.value) {
+            try {
+                paymentElement.value.unmount();
+                paymentElement.value.destroy();
+            } catch (e) {}
+            paymentElement.value = null;
+        }
+
+        await nextTick();
+        if (stripe.value && clientSecret.value) {
+            elements.value = stripe.value.elements({ clientSecret: clientSecret.value });
+            paymentElement.value = elements.value.create('payment');
+            paymentElement.value.mount('#payment-element');
+        }
     } catch (e) {
         console.error('Error initializing payment element:', e);
         stripeError.value = 'Failed to load payment system. Please refresh.';
+    }
+};
+
+const updateSpaces = async (newCount) => {
+    if (newCount < 1 || newCount > maxSpaces.value || newCount === spacesCount.value || isUpdatingSpaces.value) return;
+    isUpdatingSpaces.value = true;
+    spacesCount.value = newCount;
+
+    if (paymentElement.value) {
+        try {
+            paymentElement.value.unmount();
+            paymentElement.value.destroy();
+        } catch (e) {
+            console.error('Error destroying payment element:', e);
+        }
+        paymentElement.value = null;
+    }
+    clientSecret.value = null;
+
+    try {
+        await initPaymentElement();
+    } finally {
+        isUpdatingSpaces.value = false;
     }
 };
 
@@ -200,6 +256,7 @@ const confirmBooking = async () => {
                 spot_id: props.spot.id,
                 vehicle_id: selectedVehicleId.value,
                 mobile_number: mobileNumber.value,
+                spaces_count: spacesCount.value,
                 subtotal: baseCost.value,
                 service_fee: calculatedServiceFee.value,
                 tax: tax.value,
@@ -270,9 +327,12 @@ const durationMinutes = computed(() => {
 
         const [sh, sm] = sParts.map(Number);
         const [eh, em] = eParts.map(Number);
-        const dailyDurationMins = (eh * 60 + em) - (sh * 60 + sm);
+        let dailyDurationMins = (eh * 60 + em) - (sh * 60 + sm);
+        if (dailyDurationMins <= 0) {
+            dailyDurationMins += 24 * 60;
+        }
 
-        return Math.max(dailyDurationMins, 0) * dayCount;
+        return dailyDurationMins * dayCount;
     }
 });
 
@@ -281,20 +341,25 @@ const durationUnits = computed(() => {
 });
 
 const baseCost = computed(() => {
+    let singleCost = 0;
     if (props.type === 'monthly' && props.startDate && props.endDate) {
         const start = new Date(props.startDate);
         const end = new Date(props.endDate);
         const diffDays = Math.round((end - start) / (24 * 60 * 60 * 1000));
         const months = Math.ceil(diffDays / 30);
-        return (props.spot.price_monthly || props.spot.price) * months;
+        singleCost = (props.spot.price_monthly || props.spot.price) * months;
+    } else {
+        const rate = props.type === 'recurring' 
+            ? (props.spot.price_daily || props.spot.price_hourly) 
+            : props.spot.price_hourly;
+        singleCost = (rate / 2) * durationUnits.value;
     }
-    const rate = props.type === 'recurring' 
-        ? (props.spot.price_daily || props.spot.price_hourly) 
-        : props.spot.price_hourly;
-    return (rate / 2) * durationUnits.value;
+    return singleCost * spacesCount.value;
 });
 const calculatedServiceFee = computed(() => {
-    const rate = props.type === 'monthly' ? 0.30 : 0.10;
+    const rate = props.type === 'monthly'
+        ? ((props.serviceFeeMonthlyRate ?? 30) / 100)
+        : ((props.serviceFeeRate ?? 10) / 100);
     return baseCost.value * rate;
 });
 const tax = computed(() => (baseCost.value + calculatedServiceFee.value) * 0.13);
@@ -400,6 +465,44 @@ const formatDateTimeShort = (date) => {
                                     {{ getSelectedVehicle().license_plate }}</p>
                                 <p class="text-[14px] text-gray-500 font-medium">{{ getSelectedVehicle().make_model }}
                                 </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Parking Spaces Selector Card -->
+                    <div v-if="(totalSpaces > 1 || spot.total_spaces > 1 || maxSpaces > 1)" class="bg-white rounded-[20px] p-6 sm:p-8 shadow-sm border border-gray-200">
+                        <div class="flex items-center justify-between flex-wrap gap-4">
+                            <div class="flex items-center">
+                                <div class="bg-blue-50 p-3 rounded-2xl mr-4 text-[#1866ed]">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-gray-900">Number of Spaces</h2>
+                                    <p class="text-sm text-gray-500 mt-0.5">{{ availableSpaces }} spaces currently available for this spot</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+                                <button
+                                    type="button"
+                                    @click="updateSpaces(spacesCount - 1)"
+                                    :disabled="spacesCount <= 1 || isUpdatingSpaces"
+                                    class="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm"
+                                    title="Decrease spaces"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                                </button>
+                                <span class="w-10 text-center font-extrabold text-[18px] text-gray-900">{{ spacesCount }}</span>
+                                <button
+                                    type="button"
+                                    @click="updateSpaces(spacesCount + 1)"
+                                    :disabled="spacesCount >= maxSpaces || isUpdatingSpaces"
+                                    class="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center font-bold text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition shadow-sm"
+                                    title="Increase spaces"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -516,6 +619,33 @@ const formatDateTimeShort = (date) => {
                                         }}</span>
                                 </div>
                             </template>
+                            <div v-if="(totalSpaces > 1 || spot.total_spaces > 1 || maxSpaces > 1)" class="flex justify-between items-center text-[15px] pt-3 pb-1 border-t border-gray-100">
+                                <div>
+                                    <span class="text-gray-700 font-bold tracking-wide block">Parking Spaces</span>
+                                    <span class="text-[11px] text-gray-500">{{ availableSpaces }} available</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button
+                                        type="button"
+                                        @click="updateSpaces(spacesCount - 1)"
+                                        :disabled="spacesCount <= 1 || isUpdatingSpaces"
+                                        class="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition bg-white shadow-sm"
+                                        title="Decrease spaces"
+                                    >
+                                        -
+                                    </button>
+                                    <span class="w-8 text-center font-extrabold text-[16px] text-gray-900">{{ spacesCount }}</span>
+                                    <button
+                                        type="button"
+                                        @click="updateSpaces(spacesCount + 1)"
+                                        :disabled="spacesCount >= maxSpaces || isUpdatingSpaces"
+                                        class="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition bg-white shadow-sm"
+                                        title="Increase spaces"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <hr class="border-gray-200 mb-6">
