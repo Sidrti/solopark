@@ -294,45 +294,46 @@ const confirmBooking = async () => {
 const startTime = ref(props.start ? new Date(props.start) : new Date());
 const endTime = ref(props.end ? new Date(props.end) : new Date(startTime.value.getTime() + 3 * 60 * 60 * 1000));
 
+const dailyMinutesPerDay = computed(() => {
+    if (!props.startTimeForm || !props.endTimeForm) return 720;
+    const sParts = props.startTimeForm.split(':');
+    const eParts = props.endTimeForm.split(':');
+    if (sParts.length < 2 || eParts.length < 2) return 720;
+    const [sh, sm] = sParts.map(Number);
+    const [eh, em] = eParts.map(Number);
+    let diff = (eh * 60 + em) - (sh * 60 + sm);
+    if (diff <= 0) diff += 24 * 60;
+    return diff;
+});
+
+const recurringDayCount = computed(() => {
+    if (props.type !== 'recurring' || !props.startDate || !props.endDate) return 1;
+    const startDay = new Date(props.startDate + 'T00:00:00');
+    const endDay = new Date(props.endDate + 'T00:00:00');
+    const selectedDays = props.days ? props.days.split(',') : [];
+    if (selectedDays.length === 0) return 1;
+
+    let dayCount = 0;
+    let current = new Date(startDay);
+    let safety = 0;
+    while (current <= endDay && safety < 1000) {
+        const dStr = current.toLocaleDateString('en-US', { weekday: 'short' });
+        if (selectedDays.includes(dStr)) {
+            dayCount++;
+        }
+        current.setDate(current.getDate() + 1);
+        safety++;
+    }
+    return Math.max(1, dayCount);
+});
+
 const durationMinutes = computed(() => {
     if (props.type === 'one-time') {
-        const diffMs = (endTime.value && startTime.value) ? endTime.value.getTime() - startTime.value.getTime() : 0;
+        const diffMs = endTime.value.getTime() - startTime.value.getTime();
         const diffMins = Math.ceil(diffMs / (1000 * 60));
         return diffMins > 0 ? diffMins : 1;
     } else {
-        // Recurring
-        if (!props.startDate || !props.endDate || !props.startTimeForm || !props.endTimeForm) return 0;
-
-        const startDay = new Date(props.startDate + 'T00:00:00');
-        const endDay = new Date(props.endDate + 'T00:00:00');
-        const selectedDays = props.days ? props.days.split(',') : [];
-        if (selectedDays.length === 0) return 0;
-
-        let dayCount = 0;
-        let current = new Date(startDay);
-        // Safety limit to prevent infinite loops if dates are invalid
-        let safety = 0;
-        while (current <= endDay && safety < 1000) {
-            const dStr = current.toLocaleDateString('en-US', { weekday: 'short' }); // "Mon", "Tue"
-            if (selectedDays.includes(dStr)) {
-                dayCount++;
-            }
-            current.setDate(current.getDate() + 1);
-            safety++;
-        }
-
-        const sParts = props.startTimeForm.split(':');
-        const eParts = props.endTimeForm.split(':');
-        if (sParts.length < 2 || eParts.length < 2) return 0;
-
-        const [sh, sm] = sParts.map(Number);
-        const [eh, em] = eParts.map(Number);
-        let dailyDurationMins = (eh * 60 + em) - (sh * 60 + sm);
-        if (dailyDurationMins <= 0) {
-            dailyDurationMins += 24 * 60;
-        }
-
-        return dailyDurationMins * dayCount;
+        return dailyMinutesPerDay.value * recurringDayCount.value;
     }
 });
 
@@ -348,11 +349,16 @@ const baseCost = computed(() => {
         const diffDays = Math.round((end - start) / (24 * 60 * 60 * 1000));
         const months = Math.ceil(diffDays / 30);
         singleCost = (props.spot.price_monthly || props.spot.price) * months;
+    } else if (props.type === 'recurring') {
+        const dailyRate = Number(props.spot.price_daily || (props.spot.price_hourly * 12) || 0);
+        let extraHours = 0;
+        if (dailyMinutesPerDay.value > 720) {
+            extraHours = Math.ceil((dailyMinutesPerDay.value - 720) / 60);
+        }
+        const costPerDay = dailyRate + (extraHours * (dailyRate / 12));
+        singleCost = costPerDay * recurringDayCount.value;
     } else {
-        const rate = props.type === 'recurring' 
-            ? (props.spot.price_daily || props.spot.price_hourly) 
-            : props.spot.price_hourly;
-        singleCost = (rate / 2) * durationUnits.value;
+        singleCost = (props.spot.price_hourly / 2) * durationUnits.value;
     }
     return singleCost * spacesCount.value;
 });
@@ -609,6 +615,10 @@ const formatDateTimeShort = (date) => {
                                             props.endTimeForm }}</span>
                                         <span class="text-gray-500 font-medium uppercase truncate ml-2 max-w-[150px]">{{
                                             props.days }}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-[11px] text-gray-500 pt-1 border-t border-gray-100">
+                                        <span>Daily rate covers up to 12 hrs/day</span>
+                                        <span v-if="dailyMinutesPerDay > 720" class="text-[#1866ed] font-bold">+{{ Math.ceil((dailyMinutesPerDay - 720) / 60) }}h overage</span>
                                     </div>
                                 </div>
                             </template>

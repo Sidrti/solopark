@@ -171,8 +171,8 @@ const handleUpdateSearch = () => {
                 alert('Please select a time range of at least 1 hour.');
                 return;
             }
-            if (diffMins > 720) {
-                alert('Daily bookings cover up to 12 hours per selected day.');
+            if (diffMins > 1440) {
+                alert('Daily bookings cannot exceed 24 hours per day.');
                 return;
             }
         }

@@ -254,7 +254,8 @@ class ParkingSpotController extends Controller
                 $endTime = $request->input('endTime');
                 $days = explode(',', $request->input('days', ''));
 
-                $durationUnits = 0;
+                $numDays = 0;
+                $dailyMinutes = 720;
                 if ($startDate && $endDate && $startTime && $endTime && !empty($days)) {
                     $startRange = \Carbon\Carbon::parse($startDate, $timezone);
                     $endRange = \Carbon\Carbon::parse($endDate, $timezone);
@@ -265,19 +266,26 @@ class ParkingSpotController extends Controller
                     if ($dailyMinutes <= 0) {
                         $dailyMinutes += 24 * 60;
                     }
-                    $dailyUnits = max(0, ceil($dailyMinutes / 30));
 
                     $current = $startRange->copy();
                     while ($current->lte($endRange)) {
                         if (in_array($current->format('D'), $days)) {
-                            $durationUnits += $dailyUnits;
+                            $numDays++;
                         }
                         $current->addDay();
                     }
                 }
-                if ($durationUnits == 0)
-                    $durationUnits = 2;
-                $baseCost = (($spot->price_daily ?? $spot->price_hourly) / 2) * $durationUnits;
+                if ($numDays == 0) {
+                    $numDays = 1;
+                }
+
+                $dailyRate = (float) ($spot->price_daily ?? ($spot->price_hourly * 12));
+                $extraHours = 0;
+                if ($dailyMinutes > 720) {
+                    $extraHours = (int) ceil(($dailyMinutes - 720) / 60);
+                }
+                $costPerDay = $dailyRate + ($extraHours * ($dailyRate / 12));
+                $baseCost = $costPerDay * $numDays;
             }
 
             $serviceRate = ($searchType === 'monthly')
@@ -353,8 +361,8 @@ class ParkingSpotController extends Controller
             'address' => 'required|string|max:255',
             'type' => 'required|string|in:Driveway,Garage,Uncovered Lot,Covered Lot,Backyard',
             'price' => 'nullable|numeric|min:4',
-            'price_monthly' => 'nullable|numeric|min:0',
-            'price_daily' => 'nullable|numeric|min:1',
+            'price_monthly' => 'nullable|numeric|min:50',
+            'price_daily' => 'nullable|numeric|min:12',
             'total_spaces' => 'nullable|integer|min:1|max:100',
             'is24_7' => 'boolean',
             'features' => 'array',
@@ -472,7 +480,7 @@ class ParkingSpotController extends Controller
             'price' => $request->input('type') === 'monthly'
                 ? $spot->price_monthly
                 : ($request->input('type') === 'recurring'
-                    ? ($spot->price_daily ?? $spot->price_hourly)
+                    ? ($spot->price_daily ?? ($spot->price_hourly * 12))
                     : $spot->price_hourly),
             'price_hourly' => $spot->price_hourly,
             'price_monthly' => $spot->price_monthly,
@@ -543,7 +551,7 @@ class ParkingSpotController extends Controller
             'price' => $type === 'monthly'
                 ? $spot->price_monthly
                 : ($type === 'recurring'
-                    ? ($spot->price_daily ?? $spot->price_hourly)
+                    ? ($spot->price_daily ?? ($spot->price_hourly * 12))
                     : $spot->price_hourly),
             'price_hourly' => $spot->price_hourly,
             'price_monthly' => $spot->price_monthly,
@@ -643,8 +651,8 @@ class ParkingSpotController extends Controller
             'type' => 'required|string|in:Driveway,Garage,Uncovered Lot,Covered Lot,Backyard',
             'total_spaces' => 'nullable|integer|min:1|max:100',
             'price' => 'nullable|numeric|min:4',
-            'price_monthly' => 'nullable|numeric|min:0',
-            'price_daily' => 'nullable|numeric|min:1',
+            'price_monthly' => 'nullable|numeric|min:50',
+            'price_daily' => 'nullable|numeric|min:12',
             'is24_7' => 'boolean',
             'features' => 'array',
             'additionalPoints' => 'array',

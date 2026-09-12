@@ -102,16 +102,17 @@ class ParkingSpotForm
                         TextInput::make('price_daily')
                             ->numeric()
                             ->prefix('CA$')
-                            ->minValue(1)
-                            ->label('Daily Price (per hour)')
-                            ->helperText('Hourly rate applied during recurring daily schedule bookings'),
+                            ->minValue(12)
+                            ->label('Daily Price')
+                            ->hint('Covers 12 hours')
+                            ->helperText('Daily parking goes for 12 hours. Hours beyond 12 are charged hourly based on the daily rate (Min CA$ 12.00).'),
 
                         TextInput::make('price_monthly')
                             ->numeric()
                             ->prefix('CA$')
-                            ->minValue(0)
+                            ->minValue(50)
                             ->label('Monthly Price')
-                            ->helperText('Flat monthly subscription price'),
+                            ->helperText('Flat monthly subscription price (Min CA$ 50.00)'),
                     ])
                     ->columns(3),
 

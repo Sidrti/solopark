@@ -128,8 +128,8 @@ class BookingController extends Controller
                     if ($endCarbon->lte($startCarbon)) {
                         $endCarbon->addDay();
                     }
-                    if ($endCarbon->diffInMinutes($startCarbon) > 720) {
-                        return back()->withErrors(['endTime' => 'Daily bookings cover up to 12 hours per day.']);
+                    if ($endCarbon->diffInMinutes($startCarbon) > 1440) {
+                        return back()->withErrors(['endTime' => 'Daily bookings cannot exceed 24 hours per day.']);
                     }
                     $startUtc = $startCarbon->setTimezone('UTC');
                     $endUtc = $endCarbon->setTimezone('UTC');
