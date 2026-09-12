@@ -53,7 +53,7 @@ class ParkingSpotsTable
                     ->formatStateUsing(fn ($state) => $state ? 'CA$ ' . number_format($state, 2) : '—')
                     ->sortable(),
                 TextColumn::make('price_daily')
-                    ->label('Daily/hr')
+                    ->label('Daily (12h)')
                     ->formatStateUsing(fn ($state) => $state ? 'CA$ ' . number_format($state, 2) : '—')
                     ->sortable(),
                 TextColumn::make('price_monthly')

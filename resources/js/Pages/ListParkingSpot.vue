@@ -60,7 +60,16 @@ const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const newPoint = ref('');
 const successSnack = ref(false);
 const showSuccessModal = ref(false);
+const showDailyNoticeModal = ref(false);
+const hasShownDailyNotice = ref(false);
 const addressInput = ref(null);
+
+const handleDailyPriceInput = () => {
+    if (!hasShownDailyNotice.value && form.price_daily) {
+        showDailyNoticeModal.value = true;
+        hasShownDailyNotice.value = true;
+    }
+};
 
 const formatMobile = () => {
     const cleaned = form.contact_number.replace(/\D/g, '').substring(0, 10);
@@ -288,10 +297,18 @@ const submitListing = () => {
                                     class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400"
                                     placeholder="4" :required="form.offer_hourly" />
                             </div>
+                            <p class="text-[12px] text-gray-500 mt-1.5 font-medium">
+                                Min CA$ 4.00
+                            </p>
                         </div>
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <label class="block text-[14px] font-bold text-gray-900">Price daily/hr (CA$)</label>
+                                <div class="flex items-center gap-1.5">
+                                    <label class="block text-[14px] font-bold text-gray-900">Price daily (CA$)</label>
+                                    <button type="button" @click="showDailyNoticeModal = true" class="text-gray-400 hover:text-[#1866ed] transition-colors" title="Daily parking info">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    </button>
+                                </div>
                                 <label class="inline-flex items-center cursor-pointer">
                                     <input type="checkbox" v-model="form.offer_daily" class="sr-only peer" />
                                     <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1866ed]"></div>
@@ -302,10 +319,13 @@ const submitListing = () => {
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-[15px]">$</span>
                                 </div>
-                                <input type="number" v-model="form.price_daily" step="0.01" min="1" :disabled="!form.offer_daily"
+                                <input type="number" v-model="form.price_daily" @input="handleDailyPriceInput" step="0.01" min="12" :disabled="!form.offer_daily"
                                     class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400"
-                                    placeholder="3" :required="form.offer_daily" />
+                                    placeholder="12" :required="form.offer_daily" />
                             </div>
+                            <p class="text-[12px] text-gray-500 mt-1.5 flex items-center gap-1 font-medium">
+                                <span class="text-[#1866ed] font-semibold">ℹ️ Up to 12 hrs.</span> (Min CA$ 12.00)
+                            </p>
                         </div>
                         <div>
                             <div class="flex items-center justify-between mb-2">
@@ -320,10 +340,13 @@ const submitListing = () => {
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-[15px]">$</span>
                                 </div>
-                                <input type="number" v-model="form.price_monthly" step="0.01" min="0" :disabled="!form.offer_monthly"
+                                <input type="number" v-model="form.price_monthly" step="0.01" min="50" :disabled="!form.offer_monthly"
                                     class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400"
-                                    placeholder="90" :required="form.offer_monthly" />
+                                    placeholder="50" :required="form.offer_monthly" />
                             </div>
+                            <p class="text-[12px] text-gray-500 mt-1.5 font-medium">
+                                Min CA$ 50.00
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -554,6 +577,59 @@ const submitListing = () => {
                             class="w-full bg-[#1866ed] hover:bg-blue-700 text-white font-extrabold py-4 px-6 rounded-[12px] shadow-lg shadow-blue-100 hover:shadow-blue-200 transition-all duration-150 text-[16px]"
                         >
                             Got It
+                        </button>
+                    </div>
+                </transition>
+            </div>
+        </transition>
+
+        <!-- Daily Parking Notice Pop-up Modal -->
+        <transition
+            enter-active-class="ease-out duration-300 transition"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="ease-in duration-200 transition"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div v-if="showDailyNoticeModal" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+                <transition
+                    enter-active-class="ease-out duration-300 transition transform"
+                    enter-from-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                    enter-to-class="opacity-100 translate-y-0 sm:scale-100"
+                    leave-active-class="ease-in duration-200 transition transform"
+                    leave-from-class="opacity-100 translate-y-0 sm:scale-100"
+                    leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                >
+                    <div class="bg-white rounded-[24px] max-w-md w-full p-8 shadow-2xl border border-gray-100 text-center relative">
+                        <!-- Info Icon -->
+                        <div class="bg-blue-50 text-[#1866ed] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        
+                        <!-- Header / Notification -->
+                        <h3 class="text-[22px] font-extrabold text-gray-900 mb-3 tracking-tight">
+                            Daily Parking Covers 12 Hours
+                        </h3>
+                        
+                        <!-- Details Body -->
+                        <p class="text-[15px] text-gray-600 leading-relaxed mb-6 px-2 font-medium">
+                            Daily parking goes for <strong>12 hours</strong>. If a driver parks beyond 12 hours (e.g. 12½ or 13 hours), each additional hour will be automatically billed based on your daily rate ($D / 12 per extra hour).
+                        </p>
+                        
+                        <div class="bg-blue-50/60 rounded-xl p-3.5 mb-6 text-xs text-[#1866ed] font-semibold text-center border border-blue-100">
+                            Minimum daily price is CA$ 12.00
+                        </div>
+                        
+                        <!-- CTA button -->
+                        <button 
+                            type="button"
+                            @click="showDailyNoticeModal = false"
+                            class="w-full bg-[#1866ed] hover:bg-blue-700 text-white font-extrabold py-3.5 px-6 rounded-[12px] shadow-lg shadow-blue-100 hover:shadow-blue-200 transition-all duration-150 text-[15px]"
+                        >
+                            Understood
                         </button>
                     </div>
                 </transition>
