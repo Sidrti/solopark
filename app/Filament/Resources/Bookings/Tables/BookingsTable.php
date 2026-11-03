@@ -26,6 +26,11 @@ class BookingsTable
                 TextColumn::make('total_price')
                     ->formatStateUsing(fn ($state) => 'CA$ ' . number_format($state, 0))
                     ->sortable(),
+                TextColumn::make('manual_payout_estimate')
+                    ->label('Host payout estimate')
+                    ->state(fn ($record) => (float) $record->subtotal * (1 - config('parking.host_deduction_percentage') / 100))
+                    ->formatStateUsing(fn ($state) => 'CA$ ' . number_format($state, 2))
+                    ->tooltip('Manual payout estimate after host deduction; no automatic payout.'),
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {

@@ -107,6 +107,13 @@ class ParkingSpotForm
                             ->hint('Covers 12 hours')
                             ->helperText('Daily parking goes for 12 hours. Hours beyond 12 are charged hourly based on the daily rate (Min CA$ 12.00).'),
 
+                        TextInput::make('price_monthly_limited')
+                            ->numeric()
+                            ->prefix('CA$')
+                            ->minValue(45)
+                            ->label('Monthly Limited-Hours Parking')
+                            ->helperText('Monthly price for daily limited-hours schedule (Min CA$ 45.00)'),
+
                         TextInput::make('price_monthly')
                             ->numeric()
                             ->prefix('CA$')
@@ -114,7 +121,7 @@ class ParkingSpotForm
                             ->label('Monthly Price')
                             ->helperText('Flat monthly subscription price (Min CA$ 50.00)'),
                     ])
-                    ->columns(3),
+                    ->columns(4),
 
                 Section::make('Solopark Service Fees')
                     ->description('Set the Solopark platform service fee percentages charged to the booker for this parking slot.')

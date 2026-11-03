@@ -1,4 +1,5 @@
 <script setup>
+import { calcDailyBaseCost } from '@/Utils/dailyPricing';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { loadStripe } from '@stripe/stripe-js';
@@ -107,10 +108,19 @@ const initPaymentElement = async () => {
             },
             body: JSON.stringify({
                 amount: total.value,
-                spot_id: props.spot.id
+                spot_id: props.spot.id,
+                type: props.type,
+                startDate: props.startDate, endDate: props.endDate,
+                startTime: props.startTimeForm, endTime: props.endTimeForm,
+                days: props.days, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                spaces_count: spacesCount.value
             })
         });
         const data = await response.json();
+        if (!response.ok) {
+            stripeError.value = Object.values(data.errors || {}).flat().join(' ') || data.message || 'Unable to prepare payment.';
+            return;
+        }
         clientSecret.value = data.clientSecret;
 
         if (paymentElement.value) {
@@ -351,26 +361,35 @@ const baseCost = computed(() => {
         singleCost = (props.spot.price_monthly || props.spot.price) * months;
     } else if (props.type === 'recurring') {
         const dailyRate = Number(props.spot.price_daily || (props.spot.price_hourly * 12) || 0);
+        const monthlyRate = Number(props.spot.price_monthly_limited || props.spot.price_monthly || 0);
         let extraHours = 0;
         if (dailyMinutesPerDay.value > 720) {
             extraHours = Math.ceil((dailyMinutesPerDay.value - 720) / 60);
         }
-        const costPerDay = dailyRate + (extraHours * (dailyRate / 12));
-        singleCost = costPerDay * recurringDayCount.value;
+        singleCost = calcDailyBaseCost(recurringDayCount.value, dailyRate, monthlyRate, extraHours);
     } else {
         singleCost = (props.spot.price_hourly / 2) * durationUnits.value;
     }
     return singleCost * spacesCount.value;
 });
 const calculatedServiceFee = computed(() => {
+    // Monthly bookings use the configurable monthly markup rate.
+    // Daily (recurring) bookings use Solo Park's 10% service fee.
     const rate = props.type === 'monthly'
         ? ((props.serviceFeeMonthlyRate ?? 30) / 100)
-        : ((props.serviceFeeRate ?? 10) / 100);
+        : (props.type === 'recurring' ? 0.10 : ((props.serviceFeeRate ?? 10) / 100));
     return baseCost.value * rate;
 });
 const tax = computed(() => (baseCost.value + calculatedServiceFee.value) * 0.13);
 const gatewayFee = computed(() => (baseCost.value + calculatedServiceFee.value + tax.value) * 0.03);
-const total = computed(() => baseCost.value + calculatedServiceFee.value + tax.value + gatewayFee.value);
+// Round up to the next whole dollar for daily/recurring bookings
+const total = computed(() => {
+    const raw = baseCost.value + calculatedServiceFee.value + tax.value + gatewayFee.value;
+    if (props.type === 'recurring') {
+        return Math.ceil(Number(raw.toFixed(8)));
+    }
+    return raw;
+});
 
 const formatDateTimeShort = (date) => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
@@ -384,6 +403,8 @@ const formatDateTimeShort = (date) => {
 
     <div class="min-h-screen bg-gray-50 font-sans text-gray-900 selection:bg-[#1866ed] selection:text-white pb-20">
         <Navbar :can-login="canLogin" :can-register="canRegister" :is-sticky="true" />
+    <p class="mx-auto max-w-7xl px-6 py-3 text-sm text-gray-600">General area shown. The exact address is provided after successful payment.</p>
+    <p v-if="type === 'recurring'" class="mx-auto max-w-7xl px-6 py-3 text-sm text-blue-800">Your daily parking hours apply on every booked day. Leave at the end of each session, including overnight stays.</p>
 
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
             <button

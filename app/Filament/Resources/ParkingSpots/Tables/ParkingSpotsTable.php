@@ -56,6 +56,10 @@ class ParkingSpotsTable
                     ->label('Daily (12h)')
                     ->formatStateUsing(fn ($state) => $state ? 'CA$ ' . number_format($state, 2) : '—')
                     ->sortable(),
+                TextColumn::make('price_monthly_limited')
+                    ->label('Monthly (Ltd)')
+                    ->formatStateUsing(fn ($state) => $state ? 'CA$ ' . number_format($state, 2) : '—')
+                    ->sortable(),
                 TextColumn::make('price_monthly')
                     ->label('Monthly')
                     ->formatStateUsing(fn ($state) => $state ? 'CA$ ' . number_format($state, 2) : '—')

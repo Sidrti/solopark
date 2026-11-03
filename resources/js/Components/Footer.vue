@@ -22,6 +22,7 @@ import logo1 from '../../images/logo1.jpg';
                 <div class="space-y-4">
                     <h4 class="text-white font-bold text-xs uppercase tracking-wider">Quick Links</h4>
                     <ul class="space-y-2.5 text-xs font-semibold">
+                        <li><Link :href="route('parking-requests.create')" class="hover:text-white transition-colors">Request Parking</Link></li>
                         <li>
                             <Link :href="route('home')" class="hover:text-white transition-colors">Home</Link>
                         </li>
