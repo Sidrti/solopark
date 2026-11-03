@@ -310,16 +310,16 @@ const updateListing = () => {
                             <div class="flex items-center justify-between mb-2">
                                 <label class="block text-[14px] font-bold text-gray-900 leading-tight">Monthly Limited-Hours Parking (CA$)</label>
                                 <label class="inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" v-model="form.offer_monthly_limited" class="sr-only peer" />
+                                    <input type="checkbox" v-model="form.offer_monthly_limited" aria-label="Monthly Limited-Hours Parking" class="sr-only peer" />
                                     <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1866ed]"></div>
-                                    <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
+                                    <span class="ms-2 text-[12px] font-medium text-gray-500">{{ form.offer_monthly_limited ? 'Disable' : 'Enable' }}</span>
                                 </label>
                             </div>
                             <div class="relative">
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 sm:text-[15px]">$</span>
                                 </div>
-                                <input type="number" v-model="form.price_monthly_limited" step="0.01" min="45" :disabled="!form.offer_monthly_limited" class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" placeholder="100.00" :required="form.offer_monthly_limited" />
+                                <input type="number" v-model="form.price_monthly_limited" aria-label="Monthly Limited-Hours Parking price in Canadian dollars" step="0.01" min="45" :disabled="!form.offer_monthly_limited" class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" placeholder="100.00" :required="form.offer_monthly_limited" />
                             </div>
                             <p class="text-[12px] text-gray-500 mt-1.5 font-medium flex items-center gap-1.5 flex-wrap">
                                 <span>Minimum CA$45</span>

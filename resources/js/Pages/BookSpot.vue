@@ -1,11 +1,11 @@
 <script setup>
-import { calcDailyBaseCost } from '@/Utils/dailyPricing';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { loadStripe } from '@stripe/stripe-js';
 import Navbar from '@/Components/Navbar.vue';
 
 const props = defineProps({
+    recurringSubtotal: Number,
     canLogin: {
         type: Boolean,
     },
@@ -360,13 +360,7 @@ const baseCost = computed(() => {
         const months = Math.ceil(diffDays / 30);
         singleCost = (props.spot.price_monthly || props.spot.price) * months;
     } else if (props.type === 'recurring') {
-        const dailyRate = Number(props.spot.price_daily || (props.spot.price_hourly * 12) || 0);
-        const monthlyRate = Number(props.spot.price_monthly_limited || props.spot.price_monthly || 0);
-        let extraHours = 0;
-        if (dailyMinutesPerDay.value > 720) {
-            extraHours = Math.ceil((dailyMinutesPerDay.value - 720) / 60);
-        }
-        singleCost = calcDailyBaseCost(recurringDayCount.value, dailyRate, monthlyRate, extraHours);
+        singleCost = props.recurringSubtotal;
     } else {
         singleCost = (props.spot.price_hourly / 2) * durationUnits.value;
     }
@@ -638,8 +632,9 @@ const formatDateTimeShort = (date) => {
                                             props.days }}</span>
                                     </div>
                                     <div class="flex justify-between items-center text-[11px] text-gray-500 pt-1 border-t border-gray-100">
-                                        <span>Daily rate covers up to 12 hrs/day</span>
-                                        <span v-if="dailyMinutesPerDay > 720" class="text-[#1866ed] font-bold">+{{ Math.ceil((dailyMinutesPerDay - 720) / 60) }}h overage</span>
+                                        <span v-if="spot.price_monthly_limited">Monthly limited-hours pricing</span>
+                                    <span v-else>Daily rate covers up to 12 hrs/day</span>
+                                        <span v-if="!spot.price_monthly_limited && dailyMinutesPerDay > 720" class="text-[#1866ed] font-bold">+{{ Math.ceil((dailyMinutesPerDay - 720) / 60) }}h overage</span>
                                     </div>
                                 </div>
                             </template>

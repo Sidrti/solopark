@@ -136,33 +136,6 @@ class ParkingSpotController extends Controller
 
             if ($startDate && $endDate && $startTime && $endTime && !empty($days)) {
                 try {
-                    $startDt = \Carbon\Carbon::parse($startDate . ' ' . $startTime, $timezone);
-                    $endDt = \Carbon\Carbon::parse($endDate . ' ' . $endTime, $timezone);
-
-                    // For recurring, the spot must be available on ALL requested days within the range
-                    // and have NO overlapping bookings on ANY of those days
-                    $query->where(function ($q) use ($days, $startTime, $endTime) {
-                        $q->where('is_24_7', true)
-                            ->orWhere(function ($availQ) use ($days, $startTime, $endTime) {
-                                foreach ($days as $day) {
-                                    $availQ->whereHas(
-                                        'availabilities',
-                                        function ($subQ) use ($day, $startTime, $endTime) {
-                                            $subQ->where('day_of_week', $day);
-                                            if ($startTime <= $endTime) {
-                                                $subQ->where('start_time', '<=', $startTime)
-                                                    ->where('end_time', '>=', $endTime);
-                                            } else {
-                                                // Overnight: slot availability covering the night schedule
-                                                $subQ->where('start_time', '<=', $startTime)
-                                                    ->where('end_time', '>=', $endTime);
-                                            }
-                                        }
-                                    );
-                                }
-                            });
-                    });
-
                     // Check for overlaps on each requested day in the range
                     $current = \Carbon\Carbon::parse($startDate, $timezone);
                     $endRange = \Carbon\Carbon::parse($endDate, $timezone);
@@ -215,7 +188,7 @@ class ParkingSpotController extends Controller
             }
         }
 
-        $spots = $query->get()->map(function ($spot) use ($request, $searchType, $timezone) {
+        $spots = $query->with('availabilities')->get()->map(function ($spot) use ($request, $searchType, $timezone) {
             $photos = $spot->relationLoaded('photos') ? $spot->getRelation('photos') : collect([]);
             $firstPhoto = $photos->first();
 
@@ -248,45 +221,11 @@ class ParkingSpotController extends Controller
                 }
                 $baseCost = ($spot->price_hourly / 2) * $durationUnits;
             } else {
-                // Recurring
-                $startDate = $request->input('startDate');
-                $endDate = $request->input('endDate');
-                $startTime = $request->input('startTime');
-                $endTime = $request->input('endTime');
-                $days = explode(',', $request->input('days', ''));
-
-                $numDays = 0;
-                $dailyMinutes = 720;
-                if ($startDate && $endDate && $startTime && $endTime && !empty($days)) {
-                    $startRange = \Carbon\Carbon::parse($startDate, $timezone);
-                    $endRange = \Carbon\Carbon::parse($endDate, $timezone);
-
-                    $sParts = explode(':', $startTime);
-                    $eParts = explode(':', $endTime);
-                    $dailyMinutes = ($eParts[0] * 60 + $eParts[1]) - ($sParts[0] * 60 + $sParts[1]);
-                    if ($dailyMinutes <= 0) {
-                        $dailyMinutes += 24 * 60;
-                    }
-
-                    $current = $startRange->copy();
-                    while ($current->lte($endRange)) {
-                        if (in_array($current->format('D'), $days)) {
-                            $numDays++;
-                        }
-                        $current->addDay();
-                    }
+                try {
+                    $baseCost = $this->recurringSubtotal($spot, $request);
+                } catch (\Illuminate\Validation\ValidationException) {
+                    return null;
                 }
-                if ($numDays == 0) {
-                    $numDays = 1;
-                }
-
-                $dailyRate = (float) ($spot->price_daily ?? ($spot->price_hourly * 12));
-                $extraHours = 0;
-                if ($dailyMinutes > 720) {
-                    $extraHours = (int) ceil(($dailyMinutes - 720) / 60);
-                }
-                $monthlyAnchor = $spot->price_monthly_limited !== null ? (float) $spot->price_monthly_limited : ($spot->price_monthly !== null ? (float) $spot->price_monthly : null);
-                $baseCost = \App\Services\DailyPricing::base($numDays, $dailyRate, $monthlyAnchor, $extraHours);
             }
 
             $serviceRate = ($searchType === 'monthly')
@@ -335,7 +274,7 @@ class ParkingSpotController extends Controller
         });
 
         // Ensure all available spots appear first, unavailable listings afterward
-        $spots = $spots->sortBy([
+        $spots = $spots->filter()->sortBy([
             fn ($a, $b) => ($b['is_active'] && !$b['dummy'] ? 1 : 0) <=> ($a['is_active'] && !$a['dummy'] ? 1 : 0),
         ])->values();
 
@@ -365,7 +304,7 @@ class ParkingSpotController extends Controller
             'type' => 'required|string|in:Driveway,Garage,Uncovered Lot,Covered Lot,Backyard',
             'price' => 'nullable|numeric|min:4',
             'price_monthly' => 'nullable|numeric|min:50',
-            'price_daily' => 'nullable|numeric|min:12',
+            'price_daily' => 'nullable|required_with:price_monthly_limited|numeric|min:12',
             'price_monthly_limited' => 'nullable|numeric|min:45',
             'total_spaces' => 'nullable|integer|min:1|max:100',
             'is24_7' => 'boolean',
@@ -500,6 +439,9 @@ class ParkingSpotController extends Controller
         ];
 
         return \Inertia\Inertia::render('ParkingSpotDetails', [
+            'recurringSubtotal' => $request->input('type') === 'recurring'
+                ? $this->recurringSubtotal($spot, $request)
+                : null,
             'canLogin' => \Illuminate\Support\Facades\Route::has('login'),
             'canRegister' => \Illuminate\Support\Facades\Route::has('register'),
             'spot' => $formattedSpot,
@@ -570,6 +512,9 @@ class ParkingSpotController extends Controller
         $vehicles = \Illuminate\Support\Facades\Auth::user()->vehicles;
 
         return \Inertia\Inertia::render('BookSpot', [
+            'recurringSubtotal' => $request->input('type') === 'recurring'
+                ? $this->recurringSubtotal($spot, $request)
+                : null,
             'spot' => $formattedSpot,
             'type' => $type,
             'start' => $start,
@@ -661,7 +606,7 @@ class ParkingSpotController extends Controller
             'total_spaces' => 'nullable|integer|min:1|max:100',
             'price' => 'nullable|numeric|min:4',
             'price_monthly' => 'nullable|numeric|min:50',
-            'price_daily' => 'nullable|numeric|min:12',
+            'price_daily' => 'nullable|required_with:price_monthly_limited|numeric|min:12',
             'price_monthly_limited' => 'nullable|numeric|min:45',
             'is24_7' => 'boolean',
             'features' => 'array',
@@ -772,6 +717,16 @@ class ParkingSpotController extends Controller
             ->findOrFail($id);
 
         return response()->json($spot->bookings);
+    }
+
+    private function recurringSubtotal(ParkingSpot $spot, Request $request): float
+    {
+        $quote = (new \App\Services\DailyBookingQuote())->quote($spot, array_merge(
+            $request->only(['startDate', 'endDate', 'startTime', 'endTime', 'days']),
+            ['timezone' => $request->input('timezone', config('app.timezone')), 'spaces_count' => 1],
+        ));
+
+        return $quote['subtotal'];
     }
 
     private function getAvailableSpaces(ParkingSpot $spot, Request $request): int
