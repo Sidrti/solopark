@@ -45,6 +45,26 @@ class DailyBookingQuoteTest extends TestCase
         $this->assertSame(16.0, $quote['total_price']);
     }
 
+    public function test_limited_month_uses_available_sessions_and_restarts_at_the_anniversary(): void
+    {
+        $service = new DailyBookingQuote();
+        $spot = $this->spot(45);
+        $previous = 0;
+        $previousAverage = INF;
+
+        foreach (['2026-10-26', '2026-11-02', '2026-11-09', '2026-11-16', '2026-11-23'] as $index => $endDate) {
+            $subtotal = $service->quote($spot, array_replace($this->input(), ['endDate' => $endDate]))['subtotal'];
+            $this->assertGreaterThan($previous, $subtotal);
+            $this->assertLessThan($previousAverage, $subtotal / ($index + 1));
+            $previous = $subtotal;
+            $previousAverage = $subtotal / ($index + 1);
+        }
+
+        $this->assertSame(45.0, $previous);
+        $quote = $service->quote($spot, array_replace($this->input(), ['endDate' => '2026-11-30']));
+        $this->assertSame(57.0, $quote['subtotal']);
+    }
+
     public function test_driver_cannot_extend_overnight_window_past_checkout(): void
     {
         $this->expectException(ValidationException::class);

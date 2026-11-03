@@ -29,28 +29,57 @@ class DailyBookingQuote
         $minutes = fn ($time) => ((int) substr($time, 0, 2)) * 60 + (int) substr($time, 3, 2);
         $start = $minutes($data['startTime']);
         $duration = ($minutes($data['endTime']) - $start + 1440) % 1440 ?: 1440;
+        $availableDays = $spot->is_24_7 ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            : $spot->availabilities->filter(function ($window) use ($minutes, $start, $duration) {
+                $windowStart = $minutes($window->start_time);
+                $windowLength = ($minutes($window->end_time) - $windowStart + 1440) % 1440 ?: 1440;
+                $offset = ($start - $windowStart + 1440) % 1440;
+                return $offset + $duration <= $windowLength;
+            })->pluck('day_of_week')->all();
+
+        $daily = (float) ($spot->price_daily ?? $spot->price_hourly * 12);
+        $limited = $spot->price_monthly_limited;
         $count = 0;
+        $base = 0;
+        $month = 0;
+        $bookingStart = $current->copy();
+
         while ($current->lte($last)) {
-            if (in_array($current->format('D'), $selected)) {
-                if (!$spot->is_24_7) {
-                    $allowed = $spot->availabilities->where('day_of_week', $current->format('D'))->contains(function ($window) use ($minutes, $start, $duration) {
-                        $windowStart = $minutes($window->start_time);
-                        $windowLength = ($minutes($window->end_time) - $windowStart + 1440) % 1440 ?: 1440;
-                        $offset = ($start - $windowStart + 1440) % 1440;
-                        return $offset + $duration <= $windowLength;
-                    });
-                    if (!$allowed) {
+            $nextMonth = $bookingStart->copy()->addMonthsNoOverflow(++$month);
+            $capacity = 0;
+            $booked = 0;
+
+            while ($current->lt($nextMonth)) {
+                $day = $current->format('D');
+                $available = in_array($day, $availableDays);
+                $capacity += (int) $available;
+                if ($current->lte($last) && in_array($day, $selected)) {
+                    if (!$available) {
                         throw ValidationException::withMessages(['startTime' => 'Select parking hours within the host availability on every booked day.']);
                     }
+                    $booked++;
                 }
-                $count++;
+                $current->addDay();
             }
-            $current->addDay();
+
+            $count += $booked;
+            if ($booked && $limited !== null) {
+                $average = (float) $limited / $capacity;
+                $first = max($average, min($daily, 1.5 * $average));
+                $progress = ($booked - 1) / max(1, $capacity - 1);
+                $base += $booked === $capacity ? (float) $limited
+                    : $booked * ($first + ($average - $first) * $progress);
+            }
         }
-        if (!$count) throw ValidationException::withMessages(['days' => 'No selected days fall in this date range.']);
-        $daily = (float) ($spot->price_daily ?? $spot->price_hourly * 12);
-        $monthly = $spot->price_monthly_limited !== null ? (float) $spot->price_monthly_limited : ($spot->price_monthly !== null ? (float) $spot->price_monthly : null);
-        $base = DailyPricing::base($count, $daily, $monthly, (int) ceil(max(0, $duration - 720) / 60));
+
+        if (!$count) {
+            throw ValidationException::withMessages(['days' => 'No selected days fall in this date range.']);
+        }
+        if ($limited === null) {
+            $monthly = $spot->price_monthly !== null ? (float) $spot->price_monthly : null;
+            $base = DailyPricing::base($count, $daily, $monthly, (int) ceil(max(0, $duration - 720) / 60));
+        }
+
         return DailyPricing::fees($base * $data['spaces_count']);
     }
 }
