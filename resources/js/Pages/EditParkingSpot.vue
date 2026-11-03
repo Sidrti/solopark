@@ -23,9 +23,11 @@ const form = useForm({
     offer_hourly: props.spot.price_hourly !== null,
     offer_daily: props.spot.price_daily !== null,
     offer_monthly: props.spot.price_monthly !== null,
+    offer_monthly_limited: props.spot.price_monthly_limited !== null && props.spot.price_monthly_limited !== undefined && props.spot.price_monthly_limited !== '',
     price: props.spot.price_hourly || '',
     price_monthly: props.spot.price_monthly || '',
     price_daily: props.spot.price_daily || '',
+    price_monthly_limited: props.spot.price_monthly_limited || '',
     selectedDays: props.spot.selectedDays || [],
     availFrom: props.spot.availFrom || '',
     availTo: props.spot.availTo || '',
@@ -62,6 +64,29 @@ const handleDailyPriceInput = () => {
         hasShownDailyNotice.value = true;
     }
 };
+
+const suggestedMonthlyLimitedPrice = computed(() => {
+    const daily = parseFloat(form.price_daily);
+    if (!daily || isNaN(daily) || daily < 12) return null;
+    return Math.max(45, Math.round(daily * 6.67));
+});
+
+const applySuggestedMonthlyLimitedPrice = () => {
+    if (suggestedMonthlyLimitedPrice.value) {
+        form.price_monthly_limited = suggestedMonthlyLimitedPrice.value.toString();
+    }
+};
+
+watch(() => form.offer_monthly_limited, (enabled) => {
+    if (enabled) {
+        if (!form.offer_daily) {
+            form.offer_daily = true;
+        }
+        if (!form.price_monthly_limited && suggestedMonthlyLimitedPrice.value) {
+            form.price_monthly_limited = suggestedMonthlyLimitedPrice.value.toString();
+        }
+    }
+});
 
 const formatMobile = () => {
     const cleaned = form.contact_number.replace(/\D/g, '').substring(0, 10);
@@ -150,6 +175,7 @@ const updateListing = () => {
     if (!form.offer_hourly) form.price = null;
     if (!form.offer_daily) form.price_daily = null;
     if (!form.offer_monthly) form.price_monthly = null;
+    if (!form.offer_monthly_limited) form.price_monthly_limited = null;
 
     // Laravel bug with PATCH and multipart form data, using POST with _method=PATCH or just POST for update
     form.post(route('spots.update', props.spot.id), {
@@ -236,7 +262,7 @@ const updateListing = () => {
 
                     <p v-if="form.errors.price" class="mt-2 text-sm text-red-600 font-medium">{{ form.errors.price }}</p>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-2">
                         <div>
                             <div class="flex items-center justify-between mb-2">
                                 <label class="block text-[14px] font-bold text-gray-900">Price hourly (CA$)</label>
@@ -246,7 +272,12 @@ const updateListing = () => {
                                     <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
                                 </label>
                             </div>
-                            <input type="number" v-model="form.price" step="0.01" min="4" :disabled="!form.offer_hourly" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" placeholder="4" :required="form.offer_hourly" />
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-[15px]">$</span>
+                                </div>
+                                <input type="number" v-model="form.price" step="0.01" min="4" :disabled="!form.offer_hourly" class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" placeholder="4" :required="form.offer_hourly" />
+                            </div>
                             <p class="text-[12px] text-gray-500 mt-1.5 font-medium">
                                 Min CA$ 4.00
                             </p>
@@ -265,9 +296,38 @@ const updateListing = () => {
                                     <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
                                 </label>
                             </div>
-                            <input type="number" v-model="form.price_daily" @input="handleDailyPriceInput" step="0.01" min="12" :disabled="!form.offer_daily" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" placeholder="12" :required="form.offer_daily" />
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-[15px]">$</span>
+                                </div>
+                                <input type="number" v-model="form.price_daily" @input="handleDailyPriceInput" step="0.01" min="12" :disabled="!form.offer_daily" class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" placeholder="12" :required="form.offer_daily" />
+                            </div>
                             <p class="text-[12px] text-gray-500 mt-1.5 flex items-center gap-1 font-medium">
                                 <span class="text-[#1866ed] font-semibold">ℹ️ Up to 12 hrs.</span> (Min CA$ 12.00)
+                            </p>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-[14px] font-bold text-gray-900 leading-tight">Monthly Limited-Hours Parking (CA$)</label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" v-model="form.offer_monthly_limited" class="sr-only peer" />
+                                    <div class="relative w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1866ed]"></div>
+                                    <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
+                                </label>
+                            </div>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-[15px]">$</span>
+                                </div>
+                                <input type="number" v-model="form.price_monthly_limited" step="0.01" min="45" :disabled="!form.offer_monthly_limited" class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" placeholder="100.00" :required="form.offer_monthly_limited" />
+                            </div>
+                            <p class="text-[12px] text-gray-500 mt-1.5 font-medium flex items-center gap-1.5 flex-wrap">
+                                <span>Minimum CA$45</span>
+                                <span class="text-gray-300">|</span>
+                                <button v-if="suggestedMonthlyLimitedPrice" type="button" @click="applySuggestedMonthlyLimitedPrice" class="text-[#1866ed] hover:underline font-semibold cursor-pointer text-left" title="Click to apply suggested price">
+                                    Suggested price based on daily rate (CA$ {{ suggestedMonthlyLimitedPrice }}.00)
+                                </button>
+                                <span v-else class="text-gray-500">Suggested price based on daily rate</span>
                             </p>
                         </div>
                         <div>
@@ -279,7 +339,12 @@ const updateListing = () => {
                                     <span class="ms-2 text-[12px] font-medium text-gray-500">Enable</span>
                                 </label>
                             </div>
-                            <input type="number" v-model="form.price_monthly" step="0.01" min="50" :disabled="!form.offer_monthly" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" placeholder="50" :required="form.offer_monthly" />
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 sm:text-[15px]">$</span>
+                                </div>
+                                <input type="number" v-model="form.price_monthly" step="0.01" min="50" :disabled="!form.offer_monthly" class="pl-8 block w-full rounded-lg border-gray-300 shadow-sm focus:border-[#1866ed] focus:ring-[#1866ed] sm:text-[15px] h-[52px] disabled:bg-gray-100 disabled:text-gray-400" placeholder="50" :required="form.offer_monthly" />
+                            </div>
                             <p class="text-[12px] text-gray-500 mt-1.5 font-medium">
                                 Min CA$ 50.00
                             </p>

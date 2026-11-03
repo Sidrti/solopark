@@ -46,6 +46,7 @@ class ParkingSpotController extends Controller
                     'price_hourly' => $spot->price_hourly,
                     'price_monthly' => $spot->price_monthly,
                     'price_daily' => $spot->price_daily,
+                    'price_monthly_limited' => $spot->price_monthly_limited,
                     'is_active' => $spot->is_active,
                     'is_approved' => (bool) $spot->is_approved,
                     'total_spaces' => (int) ($spot->total_spaces ?? 1),
@@ -284,13 +285,13 @@ class ParkingSpotController extends Controller
                 if ($dailyMinutes > 720) {
                     $extraHours = (int) ceil(($dailyMinutes - 720) / 60);
                 }
-                $costPerDay = $dailyRate + ($extraHours * ($dailyRate / 12));
-                $baseCost = $costPerDay * $numDays;
+                $monthlyAnchor = $spot->price_monthly_limited !== null ? (float) $spot->price_monthly_limited : ($spot->price_monthly !== null ? (float) $spot->price_monthly : null);
+                $baseCost = \App\Services\DailyPricing::base($numDays, $dailyRate, $monthlyAnchor, $extraHours);
             }
 
             $serviceRate = ($searchType === 'monthly')
                 ? (float) (($spot->service_fee_monthly_percentage ?? 30.00) / 100)
-                : (float) (($spot->service_fee_percentage ?? 10.00) / 100);
+                : ($searchType === 'recurring' ? 0.10 : (float) (($spot->service_fee_percentage ?? 10.00) / 100));
             $finalPrice = $baseCost * (1 + $serviceRate) * 1.13 * 1.03;
 
             // Deterministic hash-based offset to obfuscate exact lat/lng on search map
@@ -304,7 +305,7 @@ class ParkingSpotController extends Controller
             $approxLng = $spot->longitude + $lngOffset;
 
             // Obfuscate exact street address (e.g. "123 Matheson Blvd" -> "Near Matheson Blvd")
-            $approxAddress = preg_replace('/^\d+\s+/', 'Near ', $spot->address);
+            $approxAddress = 'General area';
             $displayAddress = $approxAddress . ($spot->city ? ', ' . $spot->city : '');
 
             return [
@@ -315,7 +316,7 @@ class ParkingSpotController extends Controller
                 'reviews' => 10,
                 'walk' => $walkMinutes . ' min',
                 'dist' => isset($spot->distance) ? number_format($spot->distance, 1) : '0.0',
-                'price' => round($finalPrice, 0),
+                'price' => $searchType === 'recurring' ? ceil(round($finalPrice, 8)) : round($finalPrice, 0),
                 'badge' => $spot->dummy ? 'Booked' : ($searchType === 'monthly' ? 'Monthly' : null),
                 'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=400',
                 'lat' => $approxLat,
@@ -326,8 +327,10 @@ class ParkingSpotController extends Controller
                 'total_spaces' => (int) ($spot->total_spaces ?? 1),
                 'service_fee_percentage' => (float) ($spot->service_fee_percentage ?? 10.00),
                 'service_fee_monthly_percentage' => (float) ($spot->service_fee_monthly_percentage ?? 30.00),
-                'price_daily' => $spot->price_daily,
                 'price_hourly' => $spot->price_hourly,
+                'price_daily' => $spot->price_daily,
+                'price_monthly' => $spot->price_monthly,
+                'price_monthly_limited' => $spot->price_monthly_limited,
             ];
         });
 
@@ -363,6 +366,7 @@ class ParkingSpotController extends Controller
             'price' => 'nullable|numeric|min:4',
             'price_monthly' => 'nullable|numeric|min:50',
             'price_daily' => 'nullable|numeric|min:12',
+            'price_monthly_limited' => 'nullable|numeric|min:45',
             'total_spaces' => 'nullable|integer|min:1|max:100',
             'is24_7' => 'boolean',
             'features' => 'array',
@@ -382,8 +386,8 @@ class ParkingSpotController extends Controller
             'contact_number.regex' => 'The contact number must be a valid 10-digit Canadian phone number in the format (555) 555-5555.',
         ]);
 
-        if (is_null($request->price) && is_null($request->price_daily) && is_null($request->price_monthly)) {
-            return back()->withErrors(['price' => 'At least one pricing option (Hourly, Daily, or Monthly) must be enabled.'])->withInput();
+        if (is_null($request->price) && is_null($request->price_daily) && is_null($request->price_monthly) && is_null($request->price_monthly_limited)) {
+            return back()->withErrors(['price' => 'At least one pricing option (Hourly, Daily, Monthly, or Monthly Limited-Hours) must be enabled.'])->withInput();
         }
 
         $spot = ParkingSpot::create([
@@ -400,6 +404,7 @@ class ParkingSpotController extends Controller
             'price_hourly' => $validated['price'] ?? null,
             'price_monthly' => $validated['price_monthly'] ?? null,
             'price_daily' => $validated['price_daily'] ?? null,
+            'price_monthly_limited' => $validated['price_monthly_limited'] ?? null,
             'is_24_7' => $validated['is24_7'] ?? false,
             'features' => $validated['features'] ?? [],
             'additional_points' => $validated['additionalPoints'] ?? [],
@@ -472,7 +477,7 @@ class ParkingSpotController extends Controller
 
         $formattedSpot = [
             'id' => $spot->id,
-            'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
+            'address' => 'General area' . ($spot->city ? ', ' . $spot->city : ''),
             'total_spaces' => $totalSpaces,
             'available_spaces' => $availableSpaces,
             'rating' => 4.8,
@@ -485,6 +490,7 @@ class ParkingSpotController extends Controller
             'price_hourly' => $spot->price_hourly,
             'price_monthly' => $spot->price_monthly,
             'price_daily' => $spot->price_daily,
+            'price_monthly_limited' => $spot->price_monthly_limited,
             'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=1200',
             'photos' => $photos->map(fn($p) => asset('storage/' . $p->image_path))->toArray(),
             'availDays' => !empty($availDays) ? $availDays : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -545,7 +551,7 @@ class ParkingSpotController extends Controller
 
         $formattedSpot = [
             'id' => $spot->id,
-            'address' => $spot->address . ($spot->city ? ', ' . $spot->city : ''),
+            'address' => 'General area' . ($spot->city ? ', ' . $spot->city : ''),
             'total_spaces' => $totalSpaces,
             'available_spaces' => $availableSpaces,
             'price' => $type === 'monthly'
@@ -556,6 +562,7 @@ class ParkingSpotController extends Controller
             'price_hourly' => $spot->price_hourly,
             'price_monthly' => $spot->price_monthly,
             'price_daily' => $spot->price_daily,
+            'price_monthly_limited' => $spot->price_monthly_limited,
             'city' => $spot->city,
             'image' => $firstPhoto ? asset('storage/' . $firstPhoto->image_path) : 'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?q=80&w=1200',
         ];
@@ -624,7 +631,9 @@ class ParkingSpotController extends Controller
                 'parking_type' => $spot->parking_type,
                 'total_spaces' => (int) ($spot->total_spaces ?? 1),
                 'price_hourly' => $spot->price_hourly,
+                'price_daily' => $spot->price_daily,
                 'price_monthly' => $spot->price_monthly,
+                'price_monthly_limited' => $spot->price_monthly_limited,
                 'is_24_7' => $spot->is_24_7,
                 'features' => $spot->features,
                 'additional_points' => $spot->additional_points,
@@ -653,6 +662,7 @@ class ParkingSpotController extends Controller
             'price' => 'nullable|numeric|min:4',
             'price_monthly' => 'nullable|numeric|min:50',
             'price_daily' => 'nullable|numeric|min:12',
+            'price_monthly_limited' => 'nullable|numeric|min:45',
             'is24_7' => 'boolean',
             'features' => 'array',
             'additionalPoints' => 'array',
@@ -673,8 +683,8 @@ class ParkingSpotController extends Controller
             'contact_number.regex' => 'The contact number must be a valid 10-digit Canadian phone number in the format (555) 555-5555.',
         ]);
 
-        if (is_null($request->price) && is_null($request->price_daily) && is_null($request->price_monthly)) {
-            return back()->withErrors(['price' => 'At least one pricing option (Hourly, Daily, or Monthly) must be enabled.'])->withInput();
+        if (is_null($request->price) && is_null($request->price_daily) && is_null($request->price_monthly) && is_null($request->price_monthly_limited)) {
+            return back()->withErrors(['price' => 'At least one pricing option (Hourly, Daily, Monthly, or Monthly Limited-Hours) must be enabled.'])->withInput();
         }
 
         $spot->update([
@@ -690,6 +700,7 @@ class ParkingSpotController extends Controller
             'price_hourly' => $validated['price'] ?? null,
             'price_monthly' => $validated['price_monthly'] ?? null,
             'price_daily' => $validated['price_daily'] ?? null,
+            'price_monthly_limited' => $validated['price_monthly_limited'] ?? null,
             'is_24_7' => $validated['is24_7'] ?? false,
             'features' => $validated['features'] ?? [],
             'additional_points' => $validated['additionalPoints'] ?? [],

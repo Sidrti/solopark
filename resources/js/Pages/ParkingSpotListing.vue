@@ -297,6 +297,10 @@ const formatDateTimeShort = (dateStr) => {
                     </div> -->
 
                     <!-- Parking Cards -->
+                    <div class="px-5 py-4 bg-blue-50 text-sm text-blue-900">
+                        Can't find parking in your area?
+                        <Link :href="route('parking-requests.create')" class="font-bold underline">Request Parking</Link>
+                    </div>
                     <div v-if="parkingSpots.length > 0">
                         <div v-for="(spot, i) in parkingSpots" :key="i"
                             :class="[

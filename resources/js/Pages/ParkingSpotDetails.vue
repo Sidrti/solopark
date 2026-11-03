@@ -1,4 +1,5 @@
 <script setup>
+import { calcDailyBaseCost } from '@/Utils/dailyPricing';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import Navbar from '@/Components/Navbar.vue';
@@ -128,12 +129,12 @@ const baseCost = computed(() => {
         singleCost = (props.spot.price_monthly || props.spot.price) * months;
     } else if (props.type === 'recurring') {
         const dailyRate = Number(props.spot.price_daily || (props.spot.price_hourly * 12) || 0);
+        const monthlyRate = Number(props.spot.price_monthly_limited || props.spot.price_monthly || 0);
         let extraHours = 0;
         if (dailyMinutesPerDay.value > 720) {
             extraHours = Math.ceil((dailyMinutesPerDay.value - 720) / 60);
         }
-        const costPerDay = dailyRate + (extraHours * (dailyRate / 12));
-        singleCost = costPerDay * recurringDayCount.value;
+        singleCost = calcDailyBaseCost(recurringDayCount.value, dailyRate, monthlyRate, extraHours);
     } else {
         singleCost = (props.spot.price_hourly / 2) * durationUnits.value;
     }
@@ -141,14 +142,23 @@ const baseCost = computed(() => {
 });
 
 const serviceFeeAmount = computed(() => {
+    // Monthly bookings use the configurable monthly markup rate.
+    // Daily (recurring) bookings use Solo Park's 10% service fee.
     const rate = props.type === 'monthly'
         ? ((props.serviceFeeMonthlyRate ?? 30) / 100)
-        : ((props.serviceFeeRate ?? 10) / 100);
+        : (props.type === 'recurring' ? 0.10 : ((props.serviceFeeRate ?? 10) / 100));
     return baseCost.value * rate;
 });
 const taxAmount = computed(() => (baseCost.value + serviceFeeAmount.value) * 0.13);
 const gatewayFeeAmount = computed(() => (baseCost.value + serviceFeeAmount.value + taxAmount.value) * 0.03);
-const total = computed(() => baseCost.value + serviceFeeAmount.value + taxAmount.value + gatewayFeeAmount.value);
+// Round up to next dollar for daily bookings
+const total = computed(() => {
+    const raw = baseCost.value + serviceFeeAmount.value + taxAmount.value + gatewayFeeAmount.value;
+    if (props.type === 'recurring') {
+        return Math.ceil(Number(raw.toFixed(8)));
+    }
+    return raw;
+});
 
 const formatDateTimeShort = (date) => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' +
@@ -162,6 +172,8 @@ const formatDateTimeShort = (date) => {
 
     <div class="min-h-screen bg-white font-sans text-gray-900 selection:bg-[#1866ed] selection:text-white pb-20">
         <Navbar :can-login="canLogin" :can-register="canRegister" :is-sticky="true" />
+    <p class="mx-auto max-w-7xl px-6 py-3 text-sm text-gray-600">General area shown. The exact address is provided after successful payment.</p>
+    <p v-if="type === 'recurring'" class="mx-auto max-w-7xl px-6 py-3 text-sm text-blue-800">Your daily parking hours apply on every booked day. Leave at the end of each session, including overnight stays.</p>
 
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
 

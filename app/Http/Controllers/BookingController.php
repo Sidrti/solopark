@@ -72,6 +72,19 @@ class BookingController extends Controller
         ]);
 
         $spot = ParkingSpot::findOrFail($validated['spot_id']);
+        if ($validated['type'] === 'recurring') {
+            $validated = array_merge($validated, (new \App\Services\DailyBookingQuote())->quote($spot, array_merge($validated, ['spaces_count' => $validated['spaces_count'] ?? 1])));
+        }
+        // Only a successful payment belonging to this driver and listing can reveal the address.
+        \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
+        $intent = \Stripe\PaymentIntent::retrieve($validated['payment_intent_id']);
+        abort_unless($intent->status === 'succeeded'
+            && (string) $intent->metadata->user_id === (string) Auth::id()
+            && (string) $intent->metadata->spot_id === (string) $spot->id
+            && $intent->currency === 'cad'
+            && $intent->amount_received === (int) round($validated['total_price'] * 100)
+            && !Booking::where('payment_intent_id', $intent->id)->exists(), 422, 'A valid completed payment is required.');
+
         $totalSpaces = $spot->total_spaces ?? 1;
         $spacesCount = (int) ($validated['spaces_count'] ?? 1);
 
@@ -172,14 +185,14 @@ class BookingController extends Controller
             $perBookingFee = $validated['service_fee'] / $count;
             $perBookingTax = $validated['tax'] / $count;
             $perBookingGateway = $validated['gateway_fee'] / $count;
-            $perBookingTotal = $validated['total_price'] / $count;
 
             foreach ($pendingBookings as $index => $data) {
                 $data['subtotal'] = $perBookingSubtotal;
                 $data['service_fee'] = $perBookingFee;
                 $data['tax'] = $perBookingTax;
                 $data['gateway_fee'] = $perBookingGateway;
-                $data['total_price'] = round($perBookingTotal, 0);
+                $totalCents = (int) round($validated['total_price'] * 100);
+                $data['total_price'] = (intdiv($totalCents, $count) + ($index < $totalCents % $count ? 1 : 0)) / 100;
 
                 $created = Booking::create($data);
                 if ($index === 0) {
@@ -221,14 +234,21 @@ class BookingController extends Controller
     {
         $request->validate([
             'amount' => 'required|numeric|min:0.5',
-            'spot_id' => 'required|exists:parking_spots,id'
+            'spot_id' => 'required|exists:parking_spots,id',
+            'type' => 'required|in:one-time,recurring,monthly',
         ]);
+
+        $amount = $request->input('amount');
+        if ($request->input('type') === 'recurring') {
+            $quote = (new \App\Services\DailyBookingQuote())->quote(ParkingSpot::findOrFail($request->input('spot_id')), $request->all());
+            $amount = $quote['total_price'];
+        }
 
         try {
             \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
 
             $paymentIntent = \Stripe\PaymentIntent::create([
-                'amount' => (int)($request->input('amount') * 100), // in cents
+                'amount' => (int) round($amount * 100), // in cents
                 'currency' => 'cad',
                 'automatic_payment_methods' => [
                     'enabled' => true,

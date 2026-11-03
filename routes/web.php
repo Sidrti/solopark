@@ -16,6 +16,9 @@ Route::get('/', function () {
 
 Route::get('/search', [App\Http\Controllers\ParkingSpotController::class, 'index'])->name('search');
 
+Route::get('/request-parking', [App\Http\Controllers\ParkingRequestController::class, 'create'])->name('parking-requests.create');
+Route::post('/request-parking', [App\Http\Controllers\ParkingRequestController::class, 'store'])->middleware('throttle:5,1')->name('parking-requests.store');
+
 Route::get('/contact-us', function () {
     return Inertia::render('ContactUs', [
         'canLogin' => Route::has('login'),
